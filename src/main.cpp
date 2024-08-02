@@ -172,9 +172,9 @@ int main(int argc, char **argv)
         }
     }
 
-    std::thread t1(genBatchProof);
-    std::thread t2(genAggregatedProof);
-    std::thread t3(genFinalProof);
+    std::thread t1(websocketTest1);
+    std::thread t2(websocketTest2);
+    std::thread t3(websocketTest3);
 
     t1.join();
     t2.join();

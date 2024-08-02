@@ -59,6 +59,7 @@
   "files.associations": {
     "mutex": "cpp",
     "xstring": "cpp",
-    "string": "cpp"
+    "string": "cpp",
+    "thread": "cpp"
   }
 }
