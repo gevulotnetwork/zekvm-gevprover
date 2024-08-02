@@ -1,4 +1,4 @@
-#include "WebSocketClient.hpp"
+#include "websocket_client.hpp"
 #include <iostream>
 #include <thread>
 #include <functional> // Include this to use std::bind and std::placeholders
