@@ -84,6 +84,7 @@ public:
     // HashDB service
     uint16_t hashDBServerPort;
     string hashDBURL;
+    string gevsonURL;
     bool hashDB64;
     uint64_t kvDBMaxVersions;
     string dbCacheSynchURL;

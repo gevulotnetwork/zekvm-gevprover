@@ -47,6 +47,7 @@
 #include "sha256.hpp"
 #include "page_manager_test.hpp"
 #include "zkglobals.hpp"
+#include "websocket_client.cpp"
 #include "key_value_tree_test.hpp"
 
 using namespace std;
@@ -65,6 +66,99 @@ using json = nlohmann::json;
     response since this requires immediate response to submit the transaction.
 */
 
+void websocketTest1()
+{
+    WebSocketClient wsClient;
+    wsClient.run("ws://" + config.gevsonURL); // Replace with your server URI
+    std::string message = R"(
+        {
+            "inputs": [
+                {
+                    "name": "input_executor_0.json",
+                    "source": {
+                        "Url": "https://gevulotproofs.s3.us-east-2.amazonaws.com/batchProof/input_executor_0.json"
+                    }
+                }
+            ],
+            "outputs": [
+                "proof.dat"
+            ],
+            "proof": "BATCH_PROOF",
+            "prover": {
+                "prover_hash": "1ce2fbc27ecb8cb658b25e0db8e13a066159997454df7bd8c532c5aa52244e6e",
+                "schema": "Katla",
+                "verifier_hash": "457e6d8e87c5320142c80f0f8a933e9595f574819bc50f5eb3f41a677f0e7690"
+            },
+            "timeout": 900
+        }
+    )";
+    std::string response = wsClient.send_and_receive(message);
+    zklog.info("Gen Batch Proof Response: " + response);
+    std::cout << "genBatchProof response: " << response << std::endl;
+}
+
+void websocketTest2()
+{
+    WebSocketClient wsClient;
+    wsClient.run("ws://" + config.gevsonURL); // Replace with your server URI
+    std::string message = R"(
+        {
+            "inputs": [
+                {
+                    "name": "input_executor_0.json",
+                    "source": {
+                        "Url": "https://gevulotproofs.s3.us-east-2.amazonaws.com/batchProof/input_executor_0.json"
+                    }
+                }
+            ],
+            "outputs": [
+                "proof.dat"
+            ],
+            "proof": "AGGREGATED_PROOF",
+            "prover": {
+                "prover_hash": "1ce2fbc27ecb8cb658b25e0db8e13a066159997454df7bd8c532c5aa52244e6e",
+                "schema": "Katla",
+                "verifier_hash": "457e6d8e87c5320142c80f0f8a933e9595f574819bc50f5eb3f41a677f0e7690"
+            },
+            "timeout": 900
+        }
+    )";
+    std::string response = wsClient.send_and_receive(message);
+    zklog.info("Gen Aggregated Proof Response: " + response);
+    std::cout << "genAggregatedProof response: " << response << std::endl;
+}
+
+void websocketTest3()
+{
+    WebSocketClient wsClient;
+    wsClient.run("ws://" + config.gevsonURL); // Replace with your server URI
+    std::string message = R"(
+        {
+            "inputs": [
+                {
+                    "name": "input_executor_0.json",
+                    "source": {
+                        "Url": "https://gevulotproofs.s3.us-east-2.amazonaws.com/batchProof/input_executor_0.json"
+                    }
+                }
+            ],
+            "outputs": [
+                "proof.dat"
+            ],
+            "proof": "FINAL_PROOF",
+            "prover": {
+                "prover_hash": "1ce2fbc27ecb8cb658b25e0db8e13a066159997454df7bd8c532c5aa52244e6e",
+                "schema": "Katla",
+                "verifier_hash": "457e6d8e87c5320142c80f0f8a933e9595f574819bc50f5eb3f41a677f0e7690"
+            },
+            "timeout": 900
+        }
+    )";
+    std::string response = wsClient.send_and_receive(message);
+    zklog.info("Gen Final Proof Response: " + response);
+    std::cout << "genFinalProof response: " << response << std::endl;
+}
+
 int main(int argc, char **argv)
 {
     /* CONFIG */
@@ -77,6 +171,14 @@ int main(int argc, char **argv)
             return 0;
         }
     }
+
+    std::thread t1(genBatchProof);
+    std::thread t2(genAggregatedProof);
+    std::thread t3(genFinalProof);
+
+    t1.join();
+    t2.join();
+    t3.join();
 
     // Parse the name of the configuration file
     char *pConfigFile = (char *)"config/config.json";
@@ -154,7 +256,7 @@ int main(int argc, char **argv)
     // Init goldilocks precomputed
     TimerStart(GOLDILOCKS_PRECOMPUTED_INIT);
     glp.init();
-    TimerStopAndLog(GOLDILOCKS_PRECOMPUTED_INIT);    
+    TimerStopAndLog(GOLDILOCKS_PRECOMPUTED_INIT);
 
     /* TOOLS */
 
@@ -173,17 +275,19 @@ int main(int argc, char **argv)
 #ifdef DATABASE_USE_CACHE
 
     /* INIT DB CACHE */
-    if(config.useAssociativeCache){
+    if (config.useAssociativeCache)
+    {
         Database::useAssociativeCache = true;
         Database::dbMTACache.postConstruct(config.log2DbMTAssociativeCacheIndexesSize, config.log2DbMTAssociativeCacheSize, "MTACache");
     }
-    else{
+    else
+    {
         Database::useAssociativeCache = false;
         Database::dbMTCache.setName("MTCache");
-        Database::dbMTCache.setMaxSize(config.dbMTCacheSize*1024*1024);
+        Database::dbMTCache.setMaxSize(config.dbMTCacheSize * 1024 * 1024);
     }
     Database::dbProgramCache.setName("ProgramCache");
-    Database::dbProgramCache.setMaxSize(config.dbProgramCacheSize*1024*1024);
+    Database::dbProgramCache.setMaxSize(config.dbProgramCacheSize * 1024 * 1024);
 
     if (config.databaseURL != "local") // remote DB
     {
@@ -194,18 +298,21 @@ int main(int argc, char **argv)
             // if we have a db cache enabled
             if ((Database::dbMTCache.enabled()) || (Database::dbProgramCache.enabled()) || (Database::dbMTACache.enabled()))
             {
-                if (config.loadDBToMemCacheInParallel) {
+                if (config.loadDBToMemCacheInParallel)
+                {
                     // Run thread that loads the DB into the dbCache
-                    std::thread loadDBThread (loadDb2MemCache, config);
+                    std::thread loadDBThread(loadDb2MemCache, config);
                     loadDBThread.detach();
-                } else {
+                }
+                else
+                {
                     loadDb2MemCache(config);
                 }
             }
             TimerStopAndLog(DB_CACHE_LOAD);
         }
     }
-    
+
 #endif // DATABASE_USE_CACHE
 
     // If there is nothing else to run, exit normally
