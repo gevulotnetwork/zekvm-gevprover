@@ -69,7 +69,7 @@ using json = nlohmann::json;
 void websocketTest1()
 {
     WebSocketClient wsClient;
-    wsClient.run("ws://" + config.gevsonURL); // Replace with your server URI
+    wsClient.connect("ws://" + config.gevsonURL); // Replace with your server URI
     std::string message = R"(
         {
             "inputs": [
@@ -100,7 +100,7 @@ void websocketTest1()
 void websocketTest2()
 {
     WebSocketClient wsClient;
-    wsClient.run("ws://" + config.gevsonURL); // Replace with your server URI
+    wsClient.connect("ws://" + config.gevsonURL); // Replace with your server URI
     std::string message = R"(
         {
             "inputs": [
@@ -131,7 +131,7 @@ void websocketTest2()
 void websocketTest3()
 {
     WebSocketClient wsClient;
-    wsClient.run("ws://" + config.gevsonURL); // Replace with your server URI
+    wsClient.connect("ws://" + config.gevsonURL); // Replace with your server URI
     std::string message = R"(
         {
             "inputs": [

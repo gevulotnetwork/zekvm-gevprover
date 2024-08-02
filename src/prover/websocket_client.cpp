@@ -35,7 +35,7 @@ void WebSocketClient::on_close(websocketpp::connection_hdl hdl)
     std::cout << "Connection closed" << std::endl;
 }
 
-void WebSocketClient::run(const std::string &uri)
+void WebSocketClient::connect(const std::string &uri)
 {
     websocketpp::lib::error_code ec;
     client::connection_ptr con = m_client.get_connection(uri, ec);

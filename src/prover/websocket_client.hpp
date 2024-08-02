@@ -13,7 +13,7 @@ class WebSocketClient
 {
 public:
     WebSocketClient();
-    void run(const std::string &uri);
+    void connect(const std::string &uri);
     std::string send_and_receive(const std::string &message);
 
 private:
