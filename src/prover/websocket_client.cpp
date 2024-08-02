@@ -1,3 +1,4 @@
+#include "websocket_client.hpp"
 #include <iostream>
 #include <thread>
 #include <functional>

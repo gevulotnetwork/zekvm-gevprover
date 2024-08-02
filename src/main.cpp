@@ -47,7 +47,7 @@
 #include "sha256.hpp"
 #include "page_manager_test.hpp"
 #include "zkglobals.hpp"
-#include "websocket_client.cpp"
+#include "websocket_client.hpp"
 #include "key_value_tree_test.hpp"
 
 using namespace std;
