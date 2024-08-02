@@ -1,0 +1,510 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <nlohmann/json.hpp>
+#include <fstream>
+#include <iomanip>
+#include <sys/time.h>
+#include "goldilocks_base_field.hpp"
+#include "utils.hpp"
+#include "config.hpp"
+#include "version.hpp"
+#include "proof2zkin.hpp"
+#include "calcwit.hpp"
+#include "circom.hpp"
+#include "main.hpp"
+#include "prover.hpp"
+#include "service/executor/executor_server.hpp"
+#include "service/executor/executor_client.hpp"
+#include "service/aggregator/aggregator_server.hpp"
+#include "service/aggregator/aggregator_client.hpp"
+#include "service/aggregator/aggregator_client_mock.hpp"
+#include "sm/keccak_f/keccak.hpp"
+#include "sm/keccak_f/keccak_executor_test.hpp"
+#include "sm/storage/storage_executor.hpp"
+#include "sm/storage/storage_test.hpp"
+#include "sm/binary/binary_test.hpp"
+#include "sm/mem_align/mem_align_test.hpp"
+#include "timer.hpp"
+#include "hashdb/hashdb_server.hpp"
+#include "service/hashdb/hashdb_test.hpp"
+#include "service/hashdb/hashdb.hpp"
+#include "sha256_test.hpp"
+#include "blake_test.hpp"
+#include "goldilocks_precomputed.hpp"
+#include "zklog.hpp"
+#include "ecrecover_test.hpp"
+#include "hashdb_singleton.hpp"
+#include "unit_test.hpp"
+#include "database_cache_test.hpp"
+#include "main_sm/fork_5/main_exec_c/account.hpp"
+#include "main_sm/fork_6/main_exec_c/account.hpp"
+#include "state_manager.hpp"
+#include "state_manager_64.hpp"
+#include "check_tree_test.hpp"
+#include "database_performance_test.hpp"
+#include "smt_64_test.hpp"
+#include "sha256.hpp"
+#include "page_manager_test.hpp"
+#include "zkglobals.hpp"
+#include "key_value_tree_test.hpp"
+
+using namespace std;
+using json = nlohmann::json;
+
+/*
+    Prover (available via GRPC service)
+    |\
+    | Executor (available via GRPC service)
+    | |\
+    | | Main State Machine
+    | | Byte4 State Machine
+    | | Binary State Machine
+    | | Memory State Machine
+    | | Mem Align State Machine
+    | | Arithmetic State Machine
+    | | Storage State Machine------\
+    | |                             |--> Poseidon G State Machine
+    | | Padding PG State Machine---/
+    | | Padding KK SM -> Padding KK Bit -> Bits 2 Field SM -> Keccak-f SM
+    |  \
+    |   State DB (available via GRPC service)
+    |   |\
+    |   | SMT
+    |    \
+    |     Database
+    |\
+    | Stark
+    |\
+    | Circom
+*/
+
+int main(int argc, char **argv)
+{
+    /* CONFIG */
+
+    if (argc == 2)
+    {
+        if ((strcmp(argv[1], "-v") == 0) || (strcmp(argv[1], "--version") == 0))
+        {
+            // If requested to only print the version, then exit the program
+            return 0;
+        }
+    }
+
+    // Parse the name of the configuration file
+    char *pConfigFile = (char *)"config/config.json";
+    if (argc == 3)
+    {
+        if ((strcmp(argv[1], "-c") == 0) || (strcmp(argv[1], "--config") == 0))
+        {
+            pConfigFile = argv[2];
+        }
+    }
+
+    // Create one instance of Config based on the contents of the file config.json
+    json configJson;
+    file2json(pConfigFile, configJson);
+    config.load(configJson);
+    zklog.setJsonLogs(config.jsonLogs);
+    zklog.setPID(config.proverID.substr(0, 7)); // Set the logs prefix
+
+    // Print the zkProver version
+    zklog.info("Version: " + string(ZKEVM_PROVER_VERSION));
+
+    // Test that stderr is properly logged
+    cerr << "Checking error channel; ignore this trace\n";
+    zklog.warning("Checking warning channel; ignore this trace");
+
+    // Print the configuration file name
+    string configFileName = pConfigFile;
+    zklog.info("Config file: " + configFileName);
+
+    // Print the number of cores
+    zklog.info("Number of cores=" + to_string(getNumberOfCores()));
+
+    // Print the hostname and the IP address
+    string ipAddress;
+    getIPAddress(ipAddress);
+    zklog.info("IP address=" + ipAddress);
+
+#ifdef DEBUG
+    zklog.info("DEBUG defined");
+#endif
+
+    config.print();
+
+    TimerStart(WHOLE_PROCESS);
+
+    if (config.check())
+    {
+        zklog.error("main() failed calling config.check()");
+        exitProcess();
+    }
+
+    // Create one instance of the Goldilocks finite field instance
+    Goldilocks fr;
+
+    // Create one instance of the Poseidon hash library
+    PoseidonGoldilocks poseidon;
+
+    // Generate account zero keys
+    fork_5::Account::GenerateZeroKey(fr, poseidon);
+    fork_6::Account::GenerateZeroKey(fr, poseidon);
+
+    // Init the HashDB singleton
+    hashDBSingleton.init(fr, config);
+
+    // Init the StateManager singleton
+    if (config.hashDB64)
+    {
+        stateManager64.init(config);
+    }
+    else
+    {
+        stateManager.init(config);
+    }
+
+    // Init goldilocks precomputed
+    TimerStart(GOLDILOCKS_PRECOMPUTED_INIT);
+    glp.init();
+    TimerStopAndLog(GOLDILOCKS_PRECOMPUTED_INIT);    
+
+    /* TOOLS */
+
+    // Generate Keccak SM script
+    if (config.runKeccakScriptGenerator)
+    {
+        KeccakGenerateScript(config);
+    }
+
+    // Generate SHA256 SM script
+    if (config.runSHA256ScriptGenerator)
+    {
+        SHA256GenerateScript(config);
+    }
+
+#ifdef DATABASE_USE_CACHE
+
+    /* INIT DB CACHE */
+    if(config.useAssociativeCache){
+        Database::useAssociativeCache = true;
+        Database::dbMTACache.postConstruct(config.log2DbMTAssociativeCacheIndexesSize, config.log2DbMTAssociativeCacheSize, "MTACache");
+    }
+    else{
+        Database::useAssociativeCache = false;
+        Database::dbMTCache.setName("MTCache");
+        Database::dbMTCache.setMaxSize(config.dbMTCacheSize*1024*1024);
+    }
+    Database::dbProgramCache.setName("ProgramCache");
+    Database::dbProgramCache.setMaxSize(config.dbProgramCacheSize*1024*1024);
+
+    if (config.databaseURL != "local") // remote DB
+    {
+
+        if (config.loadDBToMemCache && (config.runAggregatorClient || config.runExecutorServer || config.runHashDBServer))
+        {
+            TimerStart(DB_CACHE_LOAD);
+            // if we have a db cache enabled
+            if ((Database::dbMTCache.enabled()) || (Database::dbProgramCache.enabled()) || (Database::dbMTACache.enabled()))
+            {
+                if (config.loadDBToMemCacheInParallel) {
+                    // Run thread that loads the DB into the dbCache
+                    std::thread loadDBThread (loadDb2MemCache, config);
+                    loadDBThread.detach();
+                } else {
+                    loadDb2MemCache(config);
+                }
+            }
+            TimerStopAndLog(DB_CACHE_LOAD);
+        }
+    }
+    
+#endif // DATABASE_USE_CACHE
+
+    /* TESTS */
+
+    // Test Keccak SM
+    if (config.runKeccakTest)
+    {
+        // Keccak2Test();
+        KeccakTest();
+        KeccakSMExecutorTest(fr, config);
+    }
+
+    // Test Storage SM
+    if (config.runStorageSMTest)
+    {
+        StorageSMTest(fr, poseidon, config);
+    }
+
+    // Test Binary SM
+    if (config.runBinarySMTest)
+    {
+        BinarySMTest(fr, config);
+    }
+
+    // Test MemAlign SM
+    if (config.runMemAlignSMTest)
+    {
+        MemAlignSMTest(fr, config);
+    }
+
+    // Test SHA256
+    if (config.runSHA256Test)
+    {
+        SHA256Test(fr, config);
+    }
+
+    // Test Blake
+    if (config.runBlakeTest)
+    {
+        Blake2b256_Test(fr, config);
+    }
+
+    // Test ECRecover
+    if (config.runECRecoverTest)
+    {
+        ECRecoverTest();
+    }
+
+    // Test Database cache
+    if (config.runDatabaseCacheTest)
+    {
+        DatabaseCacheTest();
+    }
+
+    // Test check tree
+    if (config.runCheckTreeTest)
+    {
+        CheckTreeTest(config);
+    }
+    
+    // Test Database performance
+    if (config.runDatabasePerformanceTest)
+    {
+        DatabasePerformanceTest();
+    }
+    // Test PageManager
+    if (config.runPageManagerTest)
+    {
+        PageManagerTest();
+    }
+    // Test KeyValueTree
+    if (config.runKeyValueTreeTest)
+    {
+        KeyValueTreeTest();
+    }
+    
+    // Test SMT64
+    if (config.runSMT64Test)
+    {
+        Smt64Test(config);
+    }
+
+    // Unit test
+    if (config.runUnitTest)
+    {
+        UnitTest(fr, poseidon, config);
+    }
+
+    // If there is nothing else to run, exit normally
+    if (!config.runExecutorServer && !config.runExecutorClient && !config.runExecutorClientMultithread &&
+        !config.runHashDBServer && !config.runHashDBTest &&
+        !config.runAggregatorServer && !config.runAggregatorClient && !config.runAggregatorClientMock)
+    {
+        return 0;
+    }
+
+#if 0
+    BatchMachineExecutor::batchInverseTest(fr);
+#endif
+
+    // Create output directory, if specified; otherwise, current working directory will be used to store output files
+    if (config.outputPath.size() > 0)
+    {
+        ensureDirectoryExists(config.outputPath);
+    }
+
+    // Create an instace of the Prover
+    TimerStart(PROVER_CONSTRUCTOR);
+    Prover prover(fr,
+                  poseidon,
+                  config);
+    TimerStopAndLog(PROVER_CONSTRUCTOR);
+
+    /* SERVERS */
+
+    // Create the HashDB server and run it, if configured
+    HashDBServer *pHashDBServer = NULL;
+    if (config.runHashDBServer)
+    {
+        pHashDBServer = new HashDBServer(fr, config);
+        zkassert(pHashDBServer != NULL);
+        zklog.info("Launching HashDB server thread...");
+        pHashDBServer->runThread();
+    }
+
+    // Create the executor server and run it, if configured
+    ExecutorServer *pExecutorServer = NULL;
+    if (config.runExecutorServer)
+    {
+        pExecutorServer = new ExecutorServer(fr, prover, config);
+        zkassert(pExecutorServer != NULL);
+        zklog.info("Launching executor server thread...");
+        pExecutorServer->runThread();
+    }
+
+    // Create the aggregator server and run it, if configured
+    AggregatorServer *pAggregatorServer = NULL;
+    if (config.runAggregatorServer)
+    {
+        pAggregatorServer = new AggregatorServer(fr, config);
+        zkassert(pAggregatorServer != NULL);
+        zklog.info("Launching aggregator server thread...");
+        pAggregatorServer->runThread();
+        sleep(5);
+    }
+
+    /* CLIENTS */
+
+    // Create the executor client and run it, if configured
+    ExecutorClient *pExecutorClient = NULL;
+    if (config.runExecutorClient)
+    {
+        pExecutorClient = new ExecutorClient(fr, config);
+        zkassert(pExecutorClient != NULL);
+        zklog.info("Launching executor client thread...");
+        pExecutorClient->runThread();
+    }
+
+    // Run the executor client multithread, if configured
+    if (config.runExecutorClientMultithread)
+    {
+        if (pExecutorClient == NULL)
+        {
+            pExecutorClient = new ExecutorClient(fr, config);
+            zkassert(pExecutorClient != NULL);
+        }
+        zklog.info("Launching executor client threads...");
+        pExecutorClient->runThreads();
+    }
+
+    // Run the hashDB test, if configured
+    if (config.runHashDBTest)
+    {
+        zklog.info("Launching HashDB test thread...");
+        HashDBTest(config);
+    }
+
+    // Create the aggregator client and run it, if configured
+    AggregatorClient *pAggregatorClient = NULL;
+    if (config.runAggregatorClient)
+    {
+        pAggregatorClient = new AggregatorClient(fr, config, prover);
+        zkassert(pAggregatorClient != NULL);
+        zklog.info("Launching aggregator client thread...");
+        pAggregatorClient->runThread();
+    }
+
+    // Create the aggregator client and run it, if configured
+    AggregatorClientMock * pAggregatorClientMock = NULL;
+    if (config.runAggregatorClientMock)
+    {
+        pAggregatorClientMock = new AggregatorClientMock(fr, config);
+        zkassert(pAggregatorClientMock != NULL);
+        zklog.info("Launching aggregator client mock thread...");
+        pAggregatorClientMock->runThread();
+    }
+
+    /* WAIT FOR CLIENT THREADS COMPETION */
+
+    // Wait for the executor client thread to end
+    if (config.runExecutorClient)
+    {
+        zkassert(pExecutorClient != NULL);
+        pExecutorClient->waitForThread();
+        sleep(1);
+        return 0;
+    }
+
+    // Wait for the executor client thread to end
+    if (config.runExecutorClientMultithread)
+    {
+        zkassert(pExecutorClient != NULL);
+        pExecutorClient->waitForThreads();
+        zklog.info("All executor client threads have completed");
+        sleep(1);
+        return 0;
+    }
+
+    // Wait for the executor server thread to end
+    if (config.runExecutorServer)
+    {
+        zkassert(pExecutorServer != NULL);
+        pExecutorServer->waitForThread();
+    }
+
+    // Wait for HashDBServer thread to end
+    if (config.runHashDBServer && !config.runHashDBTest)
+    {
+        zkassert(pHashDBServer != NULL);
+        pHashDBServer->waitForThread();
+    }
+
+    // Wait for the aggregator client thread to end
+    if (config.runAggregatorClient)
+    {
+        zkassert(pAggregatorClient != NULL);
+        pAggregatorClient->waitForThread();
+        sleep(1);
+        return 0;
+    }
+
+    // Wait for the aggregator client mock thread to end
+    if (config.runAggregatorClientMock)
+    {
+        zkassert(pAggregatorClientMock != NULL);
+        pAggregatorClientMock->waitForThread();
+        sleep(1);
+        return 0;
+    }
+
+    // Wait for the aggregator server thread to end
+    if (config.runAggregatorServer)
+    {
+        zkassert(pAggregatorServer != NULL);
+        pAggregatorServer->waitForThread();
+    }
+
+    // Clean up
+    if (pExecutorClient != NULL)
+    {
+        delete pExecutorClient;
+        pExecutorClient = NULL;
+    }
+    if (pAggregatorClient != NULL)
+    {
+        delete pAggregatorClient;
+        pAggregatorClient = NULL;
+    }
+    if (pExecutorServer != NULL)
+    {
+        delete pExecutorServer;
+        pExecutorServer = NULL;
+    }
+    if (pHashDBServer != NULL)
+    {
+        delete pHashDBServer;
+        pHashDBServer = NULL;
+    }
+    if (pAggregatorServer != NULL)
+    {
+        delete pAggregatorServer;
+        pAggregatorServer = NULL;
+    }
+
+    TimerStopAndLog(WHOLE_PROCESS);
+
+    zklog.info("Done");
+}
