@@ -236,7 +236,6 @@ std::string json2aws(const json &jsonData, const std::string &fileName)
     }
 
     return "https://" + config.awsBucketName + ".s3." + config.awsRegion + ".amazonaws.com/" + filePath + ".json";
-    return fileUrl;
 }
 
 void json2file(const json &j, const string &fileName)
