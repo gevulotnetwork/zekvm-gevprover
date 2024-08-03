@@ -67,34 +67,28 @@ using json = nlohmann::json;
 
 void testGenBatchProof(Goldilocks fr, Prover &prover, Config &config)
 {
-    // Load and parse input JSON file
     TimerStart(INPUT_LOAD);
-    // Create and init an empty prover request
     ProverRequest proverRequest(fr, config, prt_genBatchProof);
-    if (config.inputFile.size() > 0)
+
+    json inputJson;
+    file2json(config.inputFile, inputJson);
+    zkresult zkResult = proverRequest.input.load(inputJson);
+    if (zkResult != ZKR_SUCCESS)
     {
-        json inputJson;
-        file2json(config.inputFile, inputJson);
-        zkresult zkResult = proverRequest.input.load(inputJson);
-        if (zkResult != ZKR_SUCCESS)
-        {
-            zklog.error("runFileGenBatchProof() failed calling proverRequest.input.load() zkResult=" + to_string(zkResult) + "=" + zkresult2string(zkResult));
-            exitProcess();
-        }
+        zklog.error("ZK Result unsuccessful!");
+        exitProcess();
     }
     TimerStopAndLog(INPUT_LOAD);
 
-    // Create full tracer based on fork ID
     proverRequest.CreateFullTracer();
     if (proverRequest.result != ZKR_SUCCESS)
     {
-        zklog.error("runFileGenBatchProof() failed calling proverRequest.CreateFullTracer() zkResult=" + to_string(proverRequest.result) + "=" + zkresult2string(proverRequest.result));
+        zklog.error("ZKR was not success in tracer");
         exitProcess();
     }
 
     prover.genBatchProof(&proverRequest);
-
-    zklog.info("testGenBatchProof() Generated Proof: " + proverRequest->batchProofOutput);
+    zklog.info("Generated proof: " + proverRequest.batchProofOutput.dump());
 }
 
 int main(int argc, char **argv)
