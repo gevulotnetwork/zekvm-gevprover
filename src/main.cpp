@@ -95,7 +95,7 @@ void testGenBatchProof(Goldilocks fr, Prover &prover, Config &config)
 
     prover.genBatchProof(&proverRequest);
 
-    zklog.info("testGenBatchProof() Generated Proof: " + proverRequest.batchProofOutput);
+    zklog.info("testGenBatchProof() Generated Proof: " + pProverRequest->batchProofOutput);
 }
 
 int main(int argc, char **argv)

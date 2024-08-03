@@ -224,7 +224,9 @@ std::string json2aws(const json &jsonData, const std::string &fileName)
 
     std::string command = "s3cmd put " + filePath + 
         " s3://" + config.awsBucketName + "/" + "inputs/" + fileName + ".json" + 
-        " --region=" + awsRegion;
+        " --region=" + config.awsRegion;
+    
+    zklog.info("S3 Upload command: " + command);
     int result = system(command.c_str());
 
     if (result != 0)
