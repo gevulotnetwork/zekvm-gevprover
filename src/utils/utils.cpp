@@ -238,7 +238,7 @@ std::string json2aws(const json &jsonData, const std::string &fileName)
         Aws::Client::ClientConfiguration s3Cfg;
         s3Cfg.region = region;
 
-        auto credentialsProvider = Aws::MakeShared<Aws::Auth::SimpleAWSCredentialsProvider>("CredentialsProvider", awsAccessKey, awsAccessSecret);
+        auto credentialsProvider = Aws::MakeShared<AWSCredentialsProvider::SimpleAWSCredentialsProvider>("CredentialsProvider", awsAccessKey, awsAccessSecret);
         Aws::S3::S3Client s3Client(credentialsProvider, s3Cfg);
 
         Aws::S3::Model::PutObjectRequest putObjectRequest;
