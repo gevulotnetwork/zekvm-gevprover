@@ -238,8 +238,8 @@ std::string json2aws(const json &jsonData, const std::string &fileName)
         Aws::Client::ClientConfiguration s3Cfg;
         s3Cfg.region = region;
 
-        Aws::Auth::AWSCredentials credentials(awsAccessKey, awsAccessSecret);
-        Aws::S3::S3Client s3Client(credentials, s3Cfg);
+        auto credentialsProvider = Aws::MakeShared<Aws::Auth::SimpleAWSCredentialsProvider>("CredentialsProvider", awsAccessKey, awsAccessSecret);
+        Aws::S3::S3Client s3Client(credentialsProvider, s3Cfg);
 
         Aws::S3::Model::PutObjectRequest putObjectRequest;
         putObjectRequest.WithBucket(bucketName).WithKey(fileName + ".json");
