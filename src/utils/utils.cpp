@@ -233,44 +233,53 @@ string getUUID(void)
 
 std::string json2aws(const json &jsonData, const std::string &fileName)
 {
-    Aws::SDKOptions options;
-    Aws::InitAPI(options);
+    SDKOptions options;
+    InitAPI(options);
+    std::string fileUrl;
+
     try
     {
-        Aws::Client::ClientConfiguration awsCfg;
-        awsCfg.region = config.awsRegion;
+        Client::ClientConfiguration awsCfg;
+        awsCfg.region = region;
 
-        Aws::Auth::AWSCredentials credentials(config.awsAccessKey, config.awsAccessSecret);
+        auto credentialsProvider = Aws::MakeShared<Auth::SimpleAWSCredentialsProvider>(
+            "CredentialsProvider", 
+            config.awsAccessKey, 
+            config.awsAccessSecret
+        );
 
-        Aws::S3::S3Client s3_client(credentials, awsCfg);
+        S3Client s3Client(credentialsProvider, config);
 
-        Aws::S3::Model::GetObjectRequest object_request;
-        object_request.SetBucket(config.awsBucketName);
-        object_request.SetKey(url);
+        PutObjectRequest putObjectRequest;
+        putObjectRequest.WithBucket(config.awsBucketName).WithKey(file2json);
 
-        auto get_object_outcome = s3_client.GetObject(object_request);
+        std::string jsonString = jsonData.dump();
 
-        if (get_object_outcome.IsSuccess())
+        auto inputData = Aws::MakeShared<Aws::StringStream>("PutObjectInputStream");
+        *inputData << jsonString;
+        putObjectRequest.SetBody(inputData);
+
+        auto putObjectOutcome = s3Client.PutObject(putObjectRequest);
+
+        if (putObjectOutcome.IsSuccess())
         {
-            Aws::IOStream &response_stream = get_object_outcome.GetResult().GetBody();
-            std::string readBuffer((std::istreambuf_iterator<char>(response_stream)), std::istreambuf_iterator<char>());
-
-            j = ordered_json::parse(readBuffer);
+            std::cout << "JSON uploaded successfully!" << std::endl;
+            fileUrl = "https://" + bucketName + ".s3." + region + ".amazonaws.com/" + objectName;
         }
         else
         {
-            zklog.error("Failed to get object: " + get_object_outcome.GetError().GetMessage());
+            std::cerr << "Error uploading JSON: " << putObjectOutcome.GetError().GetMessage() << std::endl;
             exitProcess();
         }
     }
     catch (const std::exception &e)
     {
-        zklog.error(std::string("Exception: ") + e.what());
+        std::cerr << "Exception: " << e.what() << std::endl;
         exitProcess();
     }
 
-    // Shutdown the AWS SDK
-    Aws::ShutdownAPI(options);
+    ShutdownAPI(options);
+    return fileUrl;
 }
 
 void json2file(const json &j, const string &fileName)
