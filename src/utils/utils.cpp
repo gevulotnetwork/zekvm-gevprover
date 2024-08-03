@@ -233,7 +233,7 @@ string getUUID(void)
 
 std::string json2aws(const json &jsonData, const std::string &fileName)
 {
-    SDKOptions options;
+    Aws::SDKOptions options;
     InitAPI(options);
     std::string fileUrl;
 
