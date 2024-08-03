@@ -47,7 +47,6 @@
 #include "sha256.hpp"
 #include "page_manager_test.hpp"
 #include "zkglobals.hpp"
-#include "websocket_client.hpp"
 #include "key_value_tree_test.hpp"
 
 using namespace std;
@@ -95,7 +94,7 @@ void testGenBatchProof(Goldilocks fr, Prover &prover, Config &config)
 
     prover.genBatchProof(&proverRequest);
 
-    zklog.info("testGenBatchProof() Generated Proof: " + pProverRequest->batchProofOutput);
+    zklog.info("testGenBatchProof() Generated Proof: " + proverRequest->batchProofOutput);
 }
 
 int main(int argc, char **argv)
@@ -110,14 +109,6 @@ int main(int argc, char **argv)
             return 0;
         }
     }
-
-    std::thread t1(websocket1);
-    std::thread t2(websocket2);
-    std::thread t3(websocket3);
-
-    t1.join();
-    t2.join();
-    t3.join();
 
     // Parse the name of the configuration file
     char *pConfigFile = (char *)"config/config.json";
