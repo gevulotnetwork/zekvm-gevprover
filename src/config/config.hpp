@@ -85,6 +85,9 @@ public:
     uint16_t hashDBServerPort;
     string hashDBURL;
     string gevsonURL;
+    string awsBucketName;
+    string awsAccessKey;
+    string awsAccessSecret;
     bool hashDB64;
     uint64_t kvDBMaxVersions;
     string dbCacheSynchURL;

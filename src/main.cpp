@@ -66,92 +66,38 @@ using json = nlohmann::json;
     response since this requires immediate response to submit the transaction.
 */
 
-void websocket1() {
-    WebSocketClient client;
-    client.run("ws://localhost:50091");
-    std::string message = R"(
+void testGenBatchProof(Goldilocks fr, Prover &prover, Config &config)
+{
+    // Load and parse input JSON file
+    TimerStart(INPUT_LOAD);
+    // Create and init an empty prover request
+    ProverRequest proverRequest(fr, config, prt_genBatchProof);
+    if (config.inputFile.size() > 0)
+    {
+        json inputJson;
+        file2json(config.inputFile, inputJson);
+        zkresult zkResult = proverRequest.input.load(inputJson);
+        if (zkResult != ZKR_SUCCESS)
         {
-            "inputs": [
-                {
-                    "name": "input_executor_0.json",
-                    "source": {
-                        "Url": "https://gevulotproofs.s3.us-east-2.amazonaws.com/batchProof/input_executor_0.json"
-                    }
-                }
-            ],
-            "outputs": [
-                "proof.dat"
-            ],
-            "proof": "BATCH_PROOF",
-            "prover": {
-                "prover_hash": "1ce2fbc27ecb8cb658b25e0db8e13a066159997454df7bd8c532c5aa52244e6e",
-                "schema": "Katla",
-                "verifier_hash": "457e6d8e87c5320142c80f0f8a933e9595f574819bc50f5eb3f41a677f0e7690"
-            },
-            "timeout": 900
+            zklog.error("runFileGenBatchProof() failed calling proverRequest.input.load() zkResult=" + to_string(zkResult) + "=" + zkresult2string(zkResult));
+            exitProcess();
         }
-    )";
-    std::string response = client.send_and_receive(message);
-    std::cout << "genBatchProof response: " << response << std::endl;
+    }
+    TimerStopAndLog(INPUT_LOAD);
+
+    // Create full tracer based on fork ID
+    proverRequest.CreateFullTracer();
+    if (proverRequest.result != ZKR_SUCCESS)
+    {
+        zklog.error("runFileGenBatchProof() failed calling proverRequest.CreateFullTracer() zkResult=" + to_string(proverRequest.result) + "=" + zkresult2string(proverRequest.result));
+        exitProcess();
+    }
+
+    prover.genBatchProof(&proverRequest);
+
+    zklog.info("testGenBatchProof() Generated Proof: " + proverRequest.batchProofOutput);
 }
 
-void websocket2() {
-    WebSocketClient client;
-    client.run("ws://localhost:50091");
-    std::string message = R"(
-        {
-            "inputs": [
-                {
-                    "name": "input_executor_0.json",
-                    "source": {
-                        "Url": "https://gevulotproofs.s3.us-east-2.amazonaws.com/batchProof/input_executor_0.json"
-                    }
-                }
-            ],
-            "outputs": [
-                "proof.dat"
-            ],
-            "proof": "AGGREGATED_PROOF",
-            "prover": {
-                "prover_hash": "1ce2fbc27ecb8cb658b25e0db8e13a066159997454df7bd8c532c5aa52244e6e",
-                "schema": "Katla",
-                "verifier_hash": "457e6d8e87c5320142c80f0f8a933e9595f574819bc50f5eb3f41a677f0e7690"
-            },
-            "timeout": 900
-        }
-    )";
-    std::string response = client.send_and_receive(message);
-    std::cout << "genAggregatedProof response: " << response << std::endl;
-}
-
-void websocket3() {
-    WebSocketClient client;
-    client.run("ws://localhost:50091");
-    std::string message = R"(
-        {
-            "inputs": [
-                {
-                    "name": "input_executor_0.json",
-                    "source": {
-                        "Url": "https://gevulotproofs.s3.us-east-2.amazonaws.com/batchProof/input_executor_0.json"
-                    }
-                }
-            ],
-            "outputs": [
-                "proof.dat"
-            ],
-            "proof": "FINAL_PROOF",
-            "prover": {
-                "prover_hash": "1ce2fbc27ecb8cb658b25e0db8e13a066159997454df7bd8c532c5aa52244e6e",
-                "schema": "Katla",
-                "verifier_hash": "457e6d8e87c5320142c80f0f8a933e9595f574819bc50f5eb3f41a677f0e7690"
-            },
-            "timeout": 900
-        }
-    )";
-    std::string response = client.send_and_receive(message);
-    std::cout << "genFinalProof response: " << response << std::endl;
-}
 int main(int argc, char **argv)
 {
     /* CONFIG */
@@ -328,6 +274,30 @@ int main(int argc, char **argv)
                   poseidon,
                   config);
     TimerStopAndLog(PROVER_CONSTRUCTOR);
+
+    /* TEST */
+    if (config.runFileGenBatchProof)
+    {
+        if (config.inputFile.back() == '/')
+        {
+            Config tmpConfig = config;
+            // Get files sorted alphabetically from the folder
+            vector<string> files = getFolderFiles(config.inputFile, true);
+            // Process each input file in order
+            for (size_t i = 0; i < files.size(); i++)
+            {
+                tmpConfig.inputFile = config.inputFile + files[i];
+                zklog.info("testGenBatchProof inputFile=" + tmpConfig.inputFile);
+                // Call the prover
+                testGenBatchProof(fr, prover, tmpConfig);
+            }
+        }
+        else
+        {
+            // Call the prover
+            testGenBatchProof(fr, prover, config);
+        }
+    }
 
     /* SERVERS */
 

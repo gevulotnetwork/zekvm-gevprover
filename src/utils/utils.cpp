@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/types.h>
+#include <curl/curl.h>
 #include <unistd.h>
 #include "utils.hpp"
 #include "scalar.hpp"
@@ -19,9 +20,22 @@
 #include <net/if.h>
 #include <arpa/inet.h>
 #include "zklog.hpp"
+#include <aws/core/Aws.h>
+#include <aws/s3/S3Client.h>
+#include <aws/s3/model/PutObjectRequest.h>
+#include <aws/core/utils/Outcome.h>
+#include <aws/core/auth/AWSCredentials.h>
+#include <aws/core/utils/StringUtils.h>
+#include <aws/core/utils/memory/stl/AWSStringStream.h>
+#include <aws/s3/model/Bucket.h>
+#include <aws/s3/model/Object.h>
+#include <aws/core/utils/json/JsonSerializer.h>
 
 using namespace std;
 using namespace std::filesystem;
+using namespace Aws::S3;
+using namespace Aws::S3::Model;
+using namespace Aws::Utils::Json;
 
 void printBa(uint8_t *pData, uint64_t dataSize, string name)
 {
@@ -209,6 +223,48 @@ string getUUID(void)
     return uuidString;
 }
 
+std::string json2aws(const json &jsonData, const std::string &fileName) {
+    const std::string bucketName = config.awsBucketName;
+    const std::string awsAccessKeyId = config.awsAccessKey;
+    const std::string awsSecretAccessKey = config.awsAccessSecret;
+
+    Aws::SDKOptions options;
+    Aws::InitAPI(options);
+    {
+        Aws::Client::ClientConfiguration awsCfg;
+        awsCfg.region = Aws::Region::US_EAST_1;
+        awsCfg.credentialsProvider = Aws::MakeShared<Aws::Auth::SimpleAWSCredentialsProvider>("JsonToAws", awsAccessKeyId, awsSecretAccessKey);
+
+        Aws::S3::S3Client s3_client(awsCfg);
+
+        Aws::S3::Model::PutObjectRequest object_request;
+        object_request.SetBucket(bucketName.c_str());
+        object_request.SetKey(fileName.c_str() + ".json");
+
+        std::stringstream ss;
+        ss << jsonData.dump(); // Convert JSON object to string stream
+        auto input_data = Aws::MakeShared<Aws::StringStream>("JsonToAws");
+        *input_data << ss.str();
+
+        object_request.SetBody(input_data);
+
+        auto put_object_outcome = s3_client.PutObject(object_request);
+
+        if (!put_object_outcome.IsSuccess()) {
+            zklog.error("Failed to upload JSON to S3: " + put_object_outcome.GetError().GetMessage());
+            Aws::ShutdownAPI(options);
+            exitProcess();
+        }
+
+        std::string s3Url = "https://" + bucketName + ".s3.amazonaws.com/" + fileName  + ".json";
+        Aws::ShutdownAPI(options);
+        return s3Url;
+    }
+    Aws::ShutdownAPI(options);
+    zklog.error("Couldn't upload to S3");
+    exitProcess();
+}
+
 void json2file(const json &j, const string &fileName)
 {
     ofstream outputStream(fileName);
@@ -219,6 +275,88 @@ void json2file(const json &j, const string &fileName)
     }
     outputStream << setw(4) << j << endl;
     outputStream.close();
+}
+
+size_t WriteCallback(void* contents, size_t size, size_t nmemb, string* output) {
+    size_t total_size = size * nmemb;
+    output->append((char*)contents, total_size);
+    return total_size;
+}
+
+void url2json(const string &url, json &j) {
+    CURL* curl;
+    CURLcode res;
+    string readBuffer;
+    
+    curl_global_init(CURL_GLOBAL_DEFAULT);
+    curl = curl_easy_init();
+    if(curl) {
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+        
+        // Perform the request
+        res = curl_easy_perform(curl);
+        if(res != CURLE_OK) {
+            zklog.error("url2json() failed fetching URL " + url + "error: " + curl_easy_strerror(res));
+            curl_easy_cleanup(curl);
+            curl_global_cleanup();
+            exitProcess(EXIT_FAILURE);
+        }
+        
+        // Cleanup
+        curl_easy_cleanup(curl);
+        curl_global_cleanup();
+        
+        // Parse the JSON data
+        try {
+            j = json::parse(readBuffer);
+        } catch (exception &e) {
+            zklog.error(std::string("url2json() failed parsing JSON from URL " + url + "exception: ") + e.what());
+            exitProcess();
+        }
+    } else {
+        zklog.error("url2json() failed initializing CURL for url " + url);
+        exitProcess();
+    }
+}
+
+void url2json(const string &url, ordered_json &j) {
+    CURL* curl;
+    CURLcode res;
+    string readBuffer;
+    
+    curl_global_init(CURL_GLOBAL_DEFAULT);
+    curl = curl_easy_init();
+    if(curl) {
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+        
+        // Perform the request
+        res = curl_easy_perform(curl);
+        if(res != CURLE_OK) {
+            zklog.error("url2json() failed fetching URL " + url + "error: " + curl_easy_strerror(res));
+            curl_easy_cleanup(curl);
+            curl_global_cleanup();
+            exitProcess(EXIT_FAILURE);
+        }
+        
+        // Cleanup
+        curl_easy_cleanup(curl);
+        curl_global_cleanup();
+        
+        // Parse the JSON data
+        try {
+            j = ordered_json::parse(readBuffer);
+        } catch (exception &e) {
+            zklog.error(std::string("url2json() failed parsing JSON from URL " + url + "exception: ") + e.what());
+            exitProcess();
+        }
+    } else {
+        zklog.error("url2json() failed initializing CURL for url " + url);
+        exitProcess();
+    }
 }
 
 void file2json(const string &fileName, json &j)

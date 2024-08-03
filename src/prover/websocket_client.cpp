@@ -8,7 +8,7 @@ WebSocketClient::WebSocketClient() : m_open(false), m_done(false) {
     m_client.set_close_handler(bind(&WebSocketClient::on_close, this, std::placeholders::_1));
 }
 
-void WebSocketClient::run(const std::string &uri) {
+void WebSocketClient::connect(const std::string &uri) {
     websocketpp::lib::error_code ec;
     client::connection_ptr con = m_client.get_connection(uri, ec);
 

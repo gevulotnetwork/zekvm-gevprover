@@ -13,10 +13,13 @@ ifndef GRPCPP_LIBS
 $(error gRPC++ could not be found via pkg-config, you need to install them)
 endif
 
+AWS_SDK_CPP_INCLUDE := /usr/local/include/aws-sdk-cpp
+AWS_SDK_CPP_LIB := /usr/local/lib
+
 CXX := g++
 AS := nasm
-CXXFLAGS := -std=c++17 -Wall -pthread -lpthread -flarge-source-files -Wno-unused-label -rdynamic -mavx2 $(GRPCPP_FLAGS) #-Wfatal-errors
-LDFLAGS := -lprotobuf -lsodium -lboost_system -lboost_thread -lgpr -lpthread -lpqxx -lpq -lgmp -lstdc++ -lgmpxx -lsecp256k1 -lcrypto -luuid -fopenmp -liomp5 $(GRPCPP_LIBS)
+CXXFLAGS := -std=c++17 -Wall -pthread -lpthread -flarge-source-files -Wno-unused-label -rdynamic -mavx2 $(GRPCPP_FLAGS) -I$(AWS_SDK_CPP_INCLUDE) #-Wfatal-errors
+LDFLAGS := -lprotobuf -lsodium -lcurl -lboost_system -lboost_thread -lgpr -lpthread -lpqxx -lpq -lgmp -lstdc++ -lgmpxx -lsecp256k1 -lcrypto -luuid -fopenmp -liomp5 $(GRPCPP_LIBS) -L$(AWS_SDK_CPP_LIB) -laws-cpp-sdk-s3 -laws-cpp-sdk-core
 CFLAGS := -fopenmp
 ASFLAGS := -felf64
 

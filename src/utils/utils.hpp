@@ -44,7 +44,10 @@ void getTimestampWithSlashes(string &timestamp, string &folder, string &file);
 string getUUID (void);
 
 // Converts a json into/from a file
+void json2aws(const json &jsonData, const std::string &fileName);
 void json2file(const json &j, const string &fileName);
+void url2json(const string &url, json &j);
+void url2json(const string &url, ordered_json &j);
 void file2json(const string &fileName, json &j);
 void file2json(const string &fileName, ordered_json &j);
 

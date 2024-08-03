@@ -11,7 +11,7 @@
     "runAggregatorClientMock": false,
     "aggregatorClientMockTimeout": 0,
     "proverName": "test-prover",
-    "runFileGenBatchProof": false,
+    "runFileGenBatchProof": true,
     "runFileGenAggregatedProof": false,
     "runFileGenFinalProof": false,
     "runFileProcessBatch": false,
@@ -74,5 +74,9 @@
     "ECRecoverPrecalc": false,
     "ECRecoverPrecalcNThreads": 4,
     "stateManager": true,
-    "useAssociativeCache": false
+    "useAssociativeCache": false,
+    "awsBucketName": "",
+    "awsAccessKey": "",
+    "awsAccessSecret": "",
+    "gevsonURL": "ws://localhost:50091"
 }
