@@ -21,16 +21,13 @@
 #include <arpa/inet.h>
 #include "zklog.hpp"
 #include <aws/core/Aws.h>
+#include <aws/core/auth/AWSCredentials.h>
+#include <aws/core/client/ClientConfiguration.h>
 #include <aws/s3/S3Client.h>
 #include <aws/s3/model/PutObjectRequest.h>
-#include <aws/core/utils/memory/stl/AWSStringStream.h>
-#include <aws/core/utils/Outcome.h>
 
 using namespace std;
 using namespace std::filesystem;
-using namespace Aws;
-using namespace Aws::S3;
-using namespace Aws::S3::Model;
 
 void printBa(uint8_t *pData, uint64_t dataSize, string name)
 {
@@ -228,20 +225,24 @@ string getUUID(void)
 
 std::string json2aws(const json &jsonData, const std::string &fileName)
 {
-    SDKOptions options;
-    InitAPI(options);
+    const bucketName = config.awsBucketName;
+    const region = config.awsRegion;
+    const awsAccessKey = config.awsAccessKey;
+    const awsAccessSecret = config.awsAccessSecret;
+
+    Aws::SDKOptions options;
+    Aws::InitAPI(options);
     std::string fileUrl;
 
     try {
-        Client::ClientConfiguration s3Cfg;
-        s3Cfg.region = config.awsRegion;
+        Aws::Client::ClientConfiguration s3Cfg;
+        s3Cfg.region = region;
 
-        auto credentialsProvider = Aws::MakeShared<Auth::SimpleAWSCredentialsProvider>("CredentialsProvider", config.awsAccessKey, config.awsAccessSecret);
+        Aws::Auth::AWSCredentials credentials(awsAccessKey, awsAccessSecret);
+        Aws::S3::S3Client s3Client(credentials, s3Cfg);
 
-        S3Client s3Client(credentialsProvider, s3Cfg);
-
-        PutObjectRequest putObjectRequest;
-        putObjectRequest.WithBucket(config.awsBucketName).WithKey(fileName + ".json");
+        Aws::S3::Model::PutObjectRequest putObjectRequest;
+        putObjectRequest.WithBucket(bucketName).WithKey(fileName + ".json");
 
         std::string jsonString = jsonData.dump();
 
@@ -252,20 +253,19 @@ std::string json2aws(const json &jsonData, const std::string &fileName)
         auto putObjectOutcome = s3Client.PutObject(putObjectRequest);
 
         if (putObjectOutcome.IsSuccess()) {
-            std::cout << "JSON uploaded successfully!" << std::endl;
-            fileUrl = "https://" + config.awsBucketName + ".s3." + config.awsRegion + ".amazonaws.com/" + fileName + ".json";
+            fileUrl = "https://" + bucketName + ".s3." + region + ".amazonaws.com/" + fileName + ".json";
+            zklog.info("File uploaded to S3 " + fileUrl);
         } else {
-            std::cerr << "Error uploading JSON: " << putObjectOutcome.GetError().GetMessage() << std::endl;
+            zklog.error("Error uploading JSON: " + putObjectOutcome.GetError().GetMessage());
             exitProcess();
         }
     } catch (const std::exception &e) {
-        std::cerr << "Exception: " << e.what() << std::endl;
+        zklog.error(std::string("Exception: ") + e.what());
         exitProcess();
     }
 
-    // Shutdown the SDK
-    ShutdownAPI(options);
-    return fileUrl
+    Aws::ShutdownAPI(options);
+    return fileUrl;
 }
 
 void json2file(const json &j, const string &fileName)
