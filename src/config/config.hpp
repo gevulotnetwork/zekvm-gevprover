@@ -86,8 +86,6 @@ public:
     string hashDBURL;
     string gevsonURL;
     string awsBucketName;
-    string awsAccessKey;
-    string awsAccessSecret;
     string awsRegion;
     bool hashDB64;
     uint64_t kvDBMaxVersions;

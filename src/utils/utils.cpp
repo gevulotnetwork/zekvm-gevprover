@@ -20,12 +20,6 @@
 #include <net/if.h>
 #include <arpa/inet.h>
 #include "zklog.hpp"
-#include <aws/core/Aws.h>
-#include <aws/core/auth/AWSCredentials.h>
-#include <aws/core/client/ClientConfiguration.h>
-#include <aws/s3/S3Client.h>
-#include <aws/s3/model/PutObjectRequest.h>
-
 using namespace std;
 using namespace std::filesystem;
 
@@ -225,46 +219,21 @@ string getUUID(void)
 
 std::string json2aws(const json &jsonData, const std::string &fileName)
 {
-    const std::string bucketName = config.awsBucketName;
-    const std::string region = config.awsRegion;
-    const std::string awsAccessKey = config.awsAccessKey;
-    const std::string awsAccessSecret = config.awsAccessSecret;
+    std::string filePath = "output/" + fileName + ".json";
+    json2file(jsonData, filePath);
 
-    Aws::SDKOptions options;
-    Aws::InitAPI(options);
-    std::string fileUrl;
+    std::string command = "s3cmd put " + filePath + 
+        " s3://" + config.awsBucketName + "/" + "inputs/" + fileName + ".json" + 
+        " --region=" + awsRegion;
+    int result = system(command.c_str());
 
-    try {
-        Aws::Client::ClientConfiguration s3Cfg;
-        s3Cfg.region = region;
-
-        auto credentialsProvider = Aws::MakeShared<AWSCredentialsProvider::SimpleAWSCredentialsProvider>("CredentialsProvider", awsAccessKey, awsAccessSecret);
-        Aws::S3::S3Client s3Client(credentialsProvider, s3Cfg, Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never, false, Aws::S3::US_EAST_1_REGIONAL_ENDPOINT_OPTION::NOT_SET);
-
-        Aws::S3::Model::PutObjectRequest putObjectRequest;
-        putObjectRequest.WithBucket(bucketName).WithKey(fileName + ".json");
-
-        std::string jsonString = jsonData.dump();
-
-        auto inputData = Aws::MakeShared<Aws::StringStream>("PutObjectInputStream");
-        *inputData << jsonString;
-        putObjectRequest.SetBody(inputData);
-
-        auto putObjectOutcome = s3Client.PutObject(putObjectRequest);
-
-        if (putObjectOutcome.IsSuccess()) {
-            fileUrl = "https://" + bucketName + ".s3." + region + ".amazonaws.com/" + fileName + ".json";
-            zklog.info("File uploaded to S3 " + fileUrl);
-        } else {
-            zklog.error("Error uploading JSON: " + putObjectOutcome.GetError().GetMessage());
-            exitProcess();
-        }
-    } catch (const std::exception &e) {
-        zklog.error(std::string("Exception: ") + e.what());
+    if (result != 0)
+    {
+        zklog.error("Failed to upload file to S3, S3 might not be configured properly!");
         exitProcess();
     }
 
-    Aws::ShutdownAPI(options);
+    return "https://" + config.awsBucketName + ".s3." + config.awsRegion + ".amazonaws.com/" + filePath + ".json";
     return fileUrl;
 }
 

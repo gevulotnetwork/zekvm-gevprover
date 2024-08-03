@@ -198,8 +198,6 @@ void Config::load(json &config)
     ParseString(config, "gevsonURL", "GEVSON_URL", gevsonURL, "localhost:50091");
     ParseString(config, "awsBucketName", "AWS_BUCKET_NAME", awsBucketName, "");
     ParseString(config, "awsRegion", "AWS_REGION", awsRegion, "us-east-2");
-    ParseString(config, "awsAccessKey", "AWS_ACCESS_KEY", awsAccessKey, "");
-    ParseString(config, "awsAccessSecret", "AWS_ACCESS_SECRET", awsAccessSecret, "");
     //ParseBool(config, "hashDB64", "HASHDB64", hashDB64, false);
     hashDB64 = false; // Do not use in production; under development
     ParseU64(config, "kvDBMaxVersions", "HASHDB64_MAX_VERSIONS", kvDBMaxVersions, 131072);
@@ -445,8 +443,6 @@ void Config::print(void)
     zklog.info("    gevsonURL=" + gevsonURL);
     zklog.info("    awsBucketName=" + awsBucketName);
     zklog.info("    awsRegion=" + awsRegion);
-    zklog.info("    awsAccessKey=" + awsAccessKey);
-    zklog.info("    awsAccessSecret=" + awsAccessSecret);
     zklog.info("    hashDB64=" + to_string(hashDB64));
     zklog.info("    kvDBMaxVersions=" + to_string(kvDBMaxVersions));
     zklog.info("    dbCacheSynchURL=" + dbCacheSynchURL);
@@ -541,7 +537,7 @@ bool Config::check (void)
         zklog.error("Required file config.rom=" + rom + " does not exist");
         bError = true;
     }
-    if(awsAccessKey == "" || awsBucketName == "" || awsAccessSecret == "") {
+    if(awsBucketName == "" || awsRegion == "") {
         zklog.error("AWS S3 Configuration missing");
         bError = true;
     }
