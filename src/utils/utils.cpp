@@ -90,34 +90,42 @@ void getMemoryInfo(MemoryInfo &info)
         ss >> label >> value;
         if (find(labels.begin(), labels.end(), label) != labels.end())
         {
-            if (label == "MemTotal:") info.total = value;
-            else if (label == "MemFree:") info.free = value;
-            else if (label == "MemAvailable:") info.available = value;
-            else if (label == "Buffers:") info.buffers = value;
-            else if (label == "Cached:") info.cached = value;
-            else if (label == "SwapCached:") info.swapCached = value;
-            else if (label == "SwapTotal:") info.swapTotal = value;
-            else if (label == "SwapFree:") info.swapFree = value;
+            if (label == "MemTotal:")
+                info.total = value;
+            else if (label == "MemFree:")
+                info.free = value;
+            else if (label == "MemAvailable:")
+                info.available = value;
+            else if (label == "Buffers:")
+                info.buffers = value;
+            else if (label == "Cached:")
+                info.cached = value;
+            else if (label == "SwapCached:")
+                info.swapCached = value;
+            else if (label == "SwapTotal:")
+                info.swapTotal = value;
+            else if (label == "SwapFree:")
+                info.swapFree = value;
         }
     }
     meminfo.close();
 }
 
-void parseProcSelfStat (double &vm, double &rss)
+void parseProcSelfStat(double &vm, double &rss)
 {
     string aux;
     ifstream ifs("/proc/self/stat", ios_base::in);
     ifs >> aux >> aux >> aux >> aux >> aux >> aux >> aux >> aux >> aux >> aux >> aux >> aux >> aux >> aux >> aux >> aux >> aux >> aux >> aux >> aux >> aux >> aux >> vm >> rss;
 }
 
-void printMemoryInfo(bool compact, const char * pMessage)
+void printMemoryInfo(bool compact, const char *pMessage)
 {
     string s;
 
     string endLine = (compact ? ", " : "\n");
     string tab = (compact ? "" : "    ");
 
-    s = "MEMORY INFO " + (pMessage==NULL?"":string(pMessage)) + endLine;
+    s = "MEMORY INFO " + (pMessage == NULL ? "" : string(pMessage)) + endLine;
 
     constexpr double factorMB = 1024;
 
@@ -126,10 +134,10 @@ void printMemoryInfo(bool compact, const char * pMessage)
 
     double vm, rss;
     parseProcSelfStat(vm, rss);
-    vm /= 1024*1024;
-    rss /= 1024*1024;
+    vm /= 1024 * 1024;
+    rss /= 1024 * 1024;
 
-    s += tab + "MemTotal: "+ to_string(info.total / factorMB) + " MB" + endLine;
+    s += tab + "MemTotal: " + to_string(info.total / factorMB) + " MB" + endLine;
     s += tab + "MemFree: " + to_string(info.free / factorMB) + " MB" + endLine;
     s += tab + "MemAvailable: " + to_string(info.available / factorMB) + " MB" + endLine;
     s += tab + "Buffers: " + to_string(info.buffers / factorMB) + " MB" + endLine;
@@ -223,46 +231,46 @@ string getUUID(void)
     return uuidString;
 }
 
-std::string json2aws(const json &jsonData, const std::string &fileName) {
-    const std::string bucketName = config.awsBucketName;
-    const std::string awsAccessKeyId = config.awsAccessKey;
-    const std::string awsSecretAccessKey = config.awsAccessSecret;
-
+std::string json2aws(const json &jsonData, const std::string &fileName)
+{
     Aws::SDKOptions options;
     Aws::InitAPI(options);
+    try
     {
         Aws::Client::ClientConfiguration awsCfg;
-        awsCfg.region = Aws::Region::US_EAST_1;
-        awsCfg.credentialsProvider = Aws::MakeShared<Aws::Auth::SimpleAWSCredentialsProvider>("JsonToAws", awsAccessKeyId, awsSecretAccessKey);
+        awsCfg.region = config.awsRegion;
 
-        Aws::S3::S3Client s3_client(awsCfg);
+        Aws::Auth::AWSCredentials credentials(config.awsAccessKey, config.awsAccessSecret);
 
-        Aws::S3::Model::PutObjectRequest object_request;
-        object_request.SetBucket(bucketName.c_str());
-        object_request.SetKey(fileName.c_str() + ".json");
+        Aws::S3::S3Client s3_client(credentials, awsCfg);
 
-        std::stringstream ss;
-        ss << jsonData.dump(); // Convert JSON object to string stream
-        auto input_data = Aws::MakeShared<Aws::StringStream>("JsonToAws");
-        *input_data << ss.str();
+        Aws::S3::Model::GetObjectRequest object_request;
+        object_request.SetBucket(config.awsBucketName);
+        object_request.SetKey(url);
 
-        object_request.SetBody(input_data);
+        auto get_object_outcome = s3_client.GetObject(object_request);
 
-        auto put_object_outcome = s3_client.PutObject(object_request);
+        if (get_object_outcome.IsSuccess())
+        {
+            Aws::IOStream &response_stream = get_object_outcome.GetResult().GetBody();
+            std::string readBuffer((std::istreambuf_iterator<char>(response_stream)), std::istreambuf_iterator<char>());
 
-        if (!put_object_outcome.IsSuccess()) {
-            zklog.error("Failed to upload JSON to S3: " + put_object_outcome.GetError().GetMessage());
-            Aws::ShutdownAPI(options);
+            j = ordered_json::parse(readBuffer);
+        }
+        else
+        {
+            zklog.error("Failed to get object: " + get_object_outcome.GetError().GetMessage());
             exitProcess();
         }
-
-        std::string s3Url = "https://" + bucketName + ".s3.amazonaws.com/" + fileName  + ".json";
-        Aws::ShutdownAPI(options);
-        return s3Url;
     }
+    catch (const std::exception &e)
+    {
+        zklog.error(std::string("Exception: ") + e.what());
+        exitProcess();
+    }
+
+    // Shutdown the AWS SDK
     Aws::ShutdownAPI(options);
-    zklog.error("Couldn't upload to S3");
-    exitProcess();
 }
 
 void json2file(const json &j, const string &fileName)
@@ -277,83 +285,100 @@ void json2file(const json &j, const string &fileName)
     outputStream.close();
 }
 
-size_t WriteCallback(void* contents, size_t size, size_t nmemb, string* output) {
+size_t WriteCallback(void *contents, size_t size, size_t nmemb, string *output)
+{
     size_t total_size = size * nmemb;
-    output->append((char*)contents, total_size);
+    output->append((char *)contents, total_size);
     return total_size;
 }
 
-void url2json(const string &url, json &j) {
-    CURL* curl;
+void url2json(const string &url, json &j)
+{
+    CURL *curl;
     CURLcode res;
     string readBuffer;
-    
+
     curl_global_init(CURL_GLOBAL_DEFAULT);
     curl = curl_easy_init();
-    if(curl) {
+    if (curl)
+    {
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
-        
+
         // Perform the request
         res = curl_easy_perform(curl);
-        if(res != CURLE_OK) {
+        if (res != CURLE_OK)
+        {
             zklog.error("url2json() failed fetching URL " + url + "error: " + curl_easy_strerror(res));
             curl_easy_cleanup(curl);
             curl_global_cleanup();
-            exitProcess(EXIT_FAILURE);
+            exitProcess();
         }
-        
+
         // Cleanup
         curl_easy_cleanup(curl);
         curl_global_cleanup();
-        
+
         // Parse the JSON data
-        try {
+        try
+        {
             j = json::parse(readBuffer);
-        } catch (exception &e) {
+        }
+        catch (exception &e)
+        {
             zklog.error(std::string("url2json() failed parsing JSON from URL " + url + "exception: ") + e.what());
             exitProcess();
         }
-    } else {
+    }
+    else
+    {
         zklog.error("url2json() failed initializing CURL for url " + url);
         exitProcess();
     }
 }
 
-void url2json(const string &url, ordered_json &j) {
-    CURL* curl;
+void url2json(const string &url, ordered_json &j)
+{
+    CURL *curl;
     CURLcode res;
     string readBuffer;
-    
+
     curl_global_init(CURL_GLOBAL_DEFAULT);
     curl = curl_easy_init();
-    if(curl) {
+    if (curl)
+    {
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
-        
+
         // Perform the request
         res = curl_easy_perform(curl);
-        if(res != CURLE_OK) {
+        if (res != CURLE_OK)
+        {
             zklog.error("url2json() failed fetching URL " + url + "error: " + curl_easy_strerror(res));
             curl_easy_cleanup(curl);
             curl_global_cleanup();
-            exitProcess(EXIT_FAILURE);
+            exitProcess();
         }
-        
+
         // Cleanup
         curl_easy_cleanup(curl);
         curl_global_cleanup();
-        
+
         // Parse the JSON data
-        try {
+        try
+        {
             j = ordered_json::parse(readBuffer);
-        } catch (exception &e) {
+        }
+        catch (exception &e)
+        {
             zklog.error(std::string("url2json() failed parsing JSON from URL " + url + "exception: ") + e.what());
             exitProcess();
         }
-    } else {
+    }
+    else
+    {
         zklog.error("url2json() failed initializing CURL for url " + url);
         exitProcess();
     }
@@ -399,14 +424,14 @@ void file2json(const string &fileName, ordered_json &j)
     inputStream.close();
 }
 
-bool fileExists (const string &fileName)
+bool fileExists(const string &fileName)
 {
     struct stat fileStat;
-    int iResult = stat( fileName.c_str(), &fileStat);
+    int iResult = stat(fileName.c_str(), &fileStat);
     return (iResult == 0);
 }
 
-void ensureDirectoryExists (const string &fileName)
+void ensureDirectoryExists(const string &fileName)
 {
     string command = "[ -d " + fileName + " ] || mkdir -p " + fileName;
     int iResult = system(command.c_str());
@@ -417,17 +442,17 @@ void ensureDirectoryExists (const string &fileName)
     }
 }
 
-uint64_t getNumberOfFileDescriptors (void)
+uint64_t getNumberOfFileDescriptors(void)
 {
     auto iterator = std::filesystem::directory_iterator("/proc/self/fd");
     uint64_t result = 0;
-    for (auto& i : iterator)
+    for (auto &i : iterator)
     {
         if (i.exists())
         {
             result++;
         }
-        //zklog.info("getNumberOfFileDescriptors() i=" + to_string(i) + " file=" + i.path());
+        // zklog.info("getNumberOfFileDescriptors() i=" + to_string(i) + " file=" + i.path());
     }
     return result;
 }
@@ -554,27 +579,28 @@ string sha256(string str)
     return mdString;
 }
 
-vector<string> getFolderFiles (string folder, bool sorted)
+vector<string> getFolderFiles(string folder, bool sorted)
 {
     vector<string> vfiles;
-    
-    for (directory_entry p: directory_iterator(folder))
+
+    for (directory_entry p : directory_iterator(folder))
     {
         vfiles.push_back(p.path().filename());
     }
-    
+
     // Sort files alphabetically
-    if (sorted) sort(vfiles.begin(),vfiles.end());    
+    if (sorted)
+        sort(vfiles.begin(), vfiles.end());
 
     return vfiles;
 }
 
-uint64_t getNumberOfCores (void)
+uint64_t getNumberOfCores(void)
 {
     return omp_get_num_procs();
 }
 
-void string2file (const string & s, const string & fileName)
+void string2file(const string &s, const string &fileName)
 {
     std::ofstream outfile;
     outfile.open(fileName);
@@ -582,7 +608,7 @@ void string2file (const string & s, const string & fileName)
     outfile.close();
 }
 
-void file2string (const string &fileName, string &s)
+void file2string(const string &fileName, string &s)
 {
     std::ifstream infile;
     infile.open(fileName);
@@ -660,11 +686,11 @@ bool octalText2hexText (const string &octalText, string &hexText)
 */
 
 // Get IP address
-void getIPAddress (string &ipAddress)
+void getIPAddress(string &ipAddress)
 {
     ipAddress.clear();
 
-    struct ifaddrs* pIfaddrs = NULL;
+    struct ifaddrs *pIfaddrs = NULL;
 
     int iResult = getifaddrs(&pIfaddrs);
     if (iResult != 0)
@@ -673,7 +699,7 @@ void getIPAddress (string &ipAddress)
         return;
     }
 
-    for ( struct ifaddrs* pEntry = pIfaddrs; pEntry != NULL; pEntry = pEntry->ifa_next)
+    for (struct ifaddrs *pEntry = pIfaddrs; pEntry != NULL; pEntry = pEntry->ifa_next)
     {
         // Skip localhost
         std::string name = std::string(pEntry->ifa_name);
@@ -685,17 +711,17 @@ void getIPAddress (string &ipAddress)
         if (pEntry->ifa_addr != NULL)
         {
             sa_family_t address_family = pEntry->ifa_addr->sa_family;
-            if (address_family == AF_INET) 
+            if (address_family == AF_INET)
             {
                 char buffer[INET_ADDRSTRLEN] = {0};
-                inet_ntop(address_family, &((struct sockaddr_in*)(pEntry->ifa_addr))->sin_addr, buffer, INET_ADDRSTRLEN);
+                inet_ntop(address_family, &((struct sockaddr_in *)(pEntry->ifa_addr))->sin_addr, buffer, INET_ADDRSTRLEN);
                 if (ipAddress != "")
                 {
                     ipAddress += ",";
                 }
-                ipAddress += buffer;    // Code for IPv4 address handling
+                ipAddress += buffer; // Code for IPv4 address handling
             }
-            /*else if (address_family == AF_INET6) 
+            /*else if (address_family == AF_INET6)
             {
                 if ( pEntry->ifa_addr != nullptr )
                 {
@@ -720,7 +746,7 @@ void getStringIncrement(const string &oldString, const string &newString, uint64
         length = newString.size();
         return;
     }
-    
+
     // Find first different char, and assign it to offset
     int64_t i = 0;
     for (; i < (int64_t)oldString.size(); i++)
@@ -757,16 +783,15 @@ void getStringIncrement(const string &oldString, const string &newString, uint64
     // If new string is longer, find last non-zero byte, if any
     if (newString.size() > oldString.size())
     {
-        for (i = (int64_t)newString.size()-1; i >= (int64_t)oldString.size(); i--)
+        for (i = (int64_t)newString.size() - 1; i >= (int64_t)oldString.size(); i--)
         {
             if (newString[i] != 0)
             {
                 length = i + 1 - offset;
                 return;
             }
-        }     
+        }
     }
-
 
     // Find last different char, and calculate length
     for (i = (int64_t)oldString.size() - 1; i >= 0; i--)

@@ -88,6 +88,7 @@ public:
     string awsBucketName;
     string awsAccessKey;
     string awsAccessSecret;
+    string awsRegion;
     bool hashDB64;
     uint64_t kvDBMaxVersions;
     string dbCacheSynchURL;

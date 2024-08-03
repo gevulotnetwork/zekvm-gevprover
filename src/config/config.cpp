@@ -197,6 +197,7 @@ void Config::load(json &config)
     ParseString(config, "hashDBURL", "HASHDB_URL", hashDBURL, "local");
     ParseString(config, "gevsonURL", "GEVSON_URL", gevsonURL, "localhost:50091");
     ParseString(config, "awsBucketName", "AWS_BUCKET_NAME", awsBucketName, "");
+    ParseString(config, "awsRegion", "AWS_REGION", awsRegion, "us-east-2");
     ParseString(config, "awsAccessKey", "AWS_ACCESS_KEY", awsAccessKey, "");
     ParseString(config, "awsAccessSecret", "AWS_ACCESS_SECRET", awsAccessSecret, "");
     //ParseBool(config, "hashDB64", "HASHDB64", hashDB64, false);
@@ -443,6 +444,7 @@ void Config::print(void)
     zklog.info("    hashDBURL=" + hashDBURL);
     zklog.info("    gevsonURL=" + gevsonURL);
     zklog.info("    awsBucketName=" + awsBucketName);
+    zklog.info("    awsRegion=" + awsRegion);
     zklog.info("    awsAccessKey=" + awsAccessKey);
     zklog.info("    awsAccessSecret=" + awsAccessSecret);
     zklog.info("    hashDB64=" + to_string(hashDB64));
