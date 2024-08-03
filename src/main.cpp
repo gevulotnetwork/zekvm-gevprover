@@ -66,10 +66,9 @@ using json = nlohmann::json;
     response since this requires immediate response to submit the transaction.
 */
 
-void websocketTest1()
-{
-    WebSocketClient wsClient;
-    wsClient.connect("ws://" + config.gevsonURL); // Replace with your server URI
+void websocket1() {
+    WebSocketClient client;
+    client.run("ws://localhost:50091");
     std::string message = R"(
         {
             "inputs": [
@@ -92,15 +91,13 @@ void websocketTest1()
             "timeout": 900
         }
     )";
-    std::string response = wsClient.send_and_receive(message);
-    zklog.info("Gen Batch Proof Response: " + response);
+    std::string response = client.send_and_receive(message);
     std::cout << "genBatchProof response: " << response << std::endl;
 }
 
-void websocketTest2()
-{
-    WebSocketClient wsClient;
-    wsClient.connect("ws://" + config.gevsonURL); // Replace with your server URI
+void websocket2() {
+    WebSocketClient client;
+    client.run("ws://localhost:50091");
     std::string message = R"(
         {
             "inputs": [
@@ -123,15 +120,13 @@ void websocketTest2()
             "timeout": 900
         }
     )";
-    std::string response = wsClient.send_and_receive(message);
-    zklog.info("Gen Aggregated Proof Response: " + response);
+    std::string response = client.send_and_receive(message);
     std::cout << "genAggregatedProof response: " << response << std::endl;
 }
 
-void websocketTest3()
-{
-    WebSocketClient wsClient;
-    wsClient.connect("ws://" + config.gevsonURL); // Replace with your server URI
+void websocket3() {
+    WebSocketClient client;
+    client.run("ws://localhost:50091");
     std::string message = R"(
         {
             "inputs": [
@@ -154,11 +149,9 @@ void websocketTest3()
             "timeout": 900
         }
     )";
-    std::string response = wsClient.send_and_receive(message);
-    zklog.info("Gen Final Proof Response: " + response);
+    std::string response = client.send_and_receive(message);
     std::cout << "genFinalProof response: " << response << std::endl;
 }
-
 int main(int argc, char **argv)
 {
     /* CONFIG */
@@ -172,9 +165,9 @@ int main(int argc, char **argv)
         }
     }
 
-    std::thread t1(websocketTest1);
-    std::thread t2(websocketTest2);
-    std::thread t3(websocketTest3);
+    std::thread t1(websocket1);
+    std::thread t2(websocket2);
+    std::thread t3(websocket3);
 
     t1.join();
     t2.join();
