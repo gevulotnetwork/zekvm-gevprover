@@ -248,7 +248,7 @@ std::string json2aws(const json &jsonData, const std::string &fileName)
             config.awsAccessSecret
         );
 
-        S3Client s3Client(credentialsProvider, config);
+        S3Client s3Client(credentialsProvider, awsCfg);
 
         PutObjectRequest putObjectRequest;
         putObjectRequest.WithBucket(config.awsBucketName).WithKey(file2json);
@@ -264,7 +264,7 @@ std::string json2aws(const json &jsonData, const std::string &fileName)
         if (putObjectOutcome.IsSuccess())
         {
             std::cout << "JSON uploaded successfully!" << std::endl;
-            fileUrl = "https://" + bucketName + ".s3." + region + ".amazonaws.com/" + objectName;
+            fileUrl = "https://" + config.awsBucketName + ".s3." + config.awsRegion + ".amazonaws.com/" + fileName + ".json";
         }
         else
         {
@@ -278,7 +278,7 @@ std::string json2aws(const json &jsonData, const std::string &fileName)
         exitProcess();
     }
 
-    ShutdownAPI(options);
+    Aws::ShutdownAPI(options);
     return fileUrl;
 }
 
