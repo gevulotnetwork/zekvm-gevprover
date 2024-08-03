@@ -225,10 +225,10 @@ string getUUID(void)
 
 std::string json2aws(const json &jsonData, const std::string &fileName)
 {
-    const bucketName = config.awsBucketName;
-    const region = config.awsRegion;
-    const awsAccessKey = config.awsAccessKey;
-    const awsAccessSecret = config.awsAccessSecret;
+    const std::string bucketName = config.awsBucketName;
+    const std::string region = config.awsRegion;
+    const std::string awsAccessKey = config.awsAccessKey;
+    const std::string awsAccessSecret = config.awsAccessSecret;
 
     Aws::SDKOptions options;
     Aws::InitAPI(options);
