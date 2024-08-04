@@ -442,12 +442,17 @@ void Prover::genBatchProof(ProverRequest *pProverRequest)
             "timeout": 900
         }
     )";
-    zklog.info("Gevulot Message: " + message);
+    zklog.info("genBatchProof() Gevulot Message: " + message);
     std::string response_str = client.send_and_receive(message);
-    json response = json::parse(response_str);
     zklog.info("genBatchProof() Gevulot Response: " + response_str);
 
-    std::string proof_url = response["tx_result"]["payload"]["Verification"]["files"][0]["url"].get<std::string>();
+    json response = json::parse(response_str);
+    zklog.info("genBatchProof() Converted Gevulot Response to JSON");
+
+    json gev_tx = json::parse(response["tx_result"].get<std::string>());
+    zklog.info("genBatchProof() Getting Gevulot Transaction JSON: " + gev_tx.dump());
+
+    std::string proof_url = tx_result["payload"]["Verification"]["files"][0]["url"].get<std::string>();
     zklog.info("genBatchProof() Proof file URL: " + proof_url);
 
     ordered_json proof;
