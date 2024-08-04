@@ -417,7 +417,7 @@ void Prover::genBatchProof(ProverRequest *pProverRequest)
     json inputJson;
     pProverRequest->input.save(inputJson);
     std::string inputFile = json2aws(inputJson, pProverRequest->uuid);
-
+    zklog.info("Uploaded input file: " + inputFile);
     WebSocketClient client;
     client.connect(config.gevsonURL);
     std::string message = R"(
@@ -442,6 +442,7 @@ void Prover::genBatchProof(ProverRequest *pProverRequest)
             "timeout": 900
         }
     )";
+    zklog.info("Gevulot Message: " + message);
     std::string response_str = client.send_and_receive(message);
     json response = json::parse(response_str);
     zklog.info("genBatchProof() Gevulot Response: " + response_str);
