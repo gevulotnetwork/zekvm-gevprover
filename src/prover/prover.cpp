@@ -452,7 +452,7 @@ void Prover::genBatchProof(ProverRequest *pProverRequest)
     json gev_tx = json::parse(response["tx_result"].get<std::string>());
     zklog.info("genBatchProof() Getting Gevulot Transaction JSON: " + gev_tx.dump());
 
-    std::string proof_url = tx_result["payload"]["Verification"]["files"][0]["url"].get<std::string>();
+    std::string proof_url = gev_tx["payload"]["Verification"]["files"][0]["url"].get<std::string>();
     zklog.info("genBatchProof() Proof file URL: " + proof_url);
 
     ordered_json proof;
