@@ -590,7 +590,7 @@ void Prover::genFinalProof(ProverRequest *pProverRequest)
     std::string public_url = gev_tx["payload"]["Verification"]["files"][1]["url"].get<std::string>();
     zklog.info("genFinalProof() Proof file URL: " + proof_url);
 
-    ordered_json proof;
+    json proof;
     url2json(proof_url, proof);
 
     json publicJson = json::parse("[]");
