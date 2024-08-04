@@ -410,10 +410,7 @@ void Prover::genBatchProof(ProverRequest *pProverRequest)
     zklog.info("Prover::genBatchProof() timestamp: " + pProverRequest->timestamp);
     zklog.info("Prover::genBatchProof() UUID: " + pProverRequest->uuid);
     zklog.info("Prover::genBatchProof() input file: " + pProverRequest->inputFile());
-    // zklog.info("Prover::genBatchProof() public file: " + pProverRequest->publicsOutputFile());
-    // zklog.info("Prover::genBatchProof() proof file: " + pProverRequest->proofFile());
 
-    // Save input to <timestamp>.input.json, as provided by client
     json inputJson;
     pProverRequest->input.save(inputJson);
     std::string inputFile = json2aws(inputJson, pProverRequest->uuid);
@@ -465,7 +462,6 @@ void Prover::genBatchProof(ProverRequest *pProverRequest)
 
 void Prover::genAggregatedProof(ProverRequest *pProverRequest)
 {
-
     zkassert(config.generateProof());
     zkassert(pProverRequest != NULL);
     zkassert(pProverRequest->type == prt_genAggregatedProof);
@@ -475,141 +471,62 @@ void Prover::genAggregatedProof(ProverRequest *pProverRequest)
     printMemoryInfo(true);
     printProcessInfo(true);
 
-    // Save input to file
-    if (config.saveInputToFile)
-    {
-        json2file(pProverRequest->aggregatedProofInput1, pProverRequest->filePrefix + "aggregated_proof.input_1.json");
-        json2file(pProverRequest->aggregatedProofInput2, pProverRequest->filePrefix + "aggregated_proof.input_2.json");
-    }
+    zklog.info("Prover::genAggregatedProof() timestamp: " + pProverRequest->timestamp);
+    zklog.info("Prover::genAggregatedProof() UUID: " + pProverRequest->uuid);
+    zklog.info("Prover::genAggregatedProof() input file: " + pProverRequest->inputFile());
 
-    // Input is pProverRequest->aggregatedProofInput1 and pProverRequest->aggregatedProofInput2 (of type json)
+    std::string inputFile = json2aws(pProverRequest->aggregatedProofInput1, pProverRequest->uuid + std::string("-agg-1"));
+    std::string inputFile2 = json2aws(pProverRequest->aggregatedProofInput2, pProverRequest->uuid + std::string("-agg-2"));
+    zklog.info("genAggregatedProof() Uploaded input file: " + inputFile);
 
-    ordered_json verKey;
-    file2json(config.recursive2Verkey, verKey);
-
-    // ----------------------------------------------
-    // CHECKS
-    // ----------------------------------------------
-    // Check chainID
-
-    if (pProverRequest->aggregatedProofInput1["publics"][17] != pProverRequest->aggregatedProofInput2["publics"][17])
-    {
-        zklog.error("Prover::genAggregatedProof() Inputs has different chainId " + pProverRequest->aggregatedProofInput1["publics"][17].dump() + "!=" + pProverRequest->aggregatedProofInput2["publics"][17].dump());
-        pProverRequest->result = ZKR_AGGREGATED_PROOF_INVALID_INPUT;
-        return;
-    }
-    if (pProverRequest->aggregatedProofInput1["publics"][18] != pProverRequest->aggregatedProofInput2["publics"][18])
-    {
-        zklog.error("Prover::genAggregatedProof() Inputs has different forkId " + pProverRequest->aggregatedProofInput1["publics"][18].dump() + "!=" + pProverRequest->aggregatedProofInput2["publics"][18].dump());
-        pProverRequest->result = ZKR_AGGREGATED_PROOF_INVALID_INPUT;
-        return;
-    }
-    // Check midStateRoot
-    for (int i = 0; i < 8; i++)
-    {
-        if (pProverRequest->aggregatedProofInput1["publics"][19 + i] != pProverRequest->aggregatedProofInput2["publics"][0 + i])
+    WebSocketClient client;
+    client.connect(config.gevsonURL);
+    std::string message = R"(
         {
-            zklog.error("Prover::genAggregatedProof() The newStateRoot and the oldStateRoot are not consistent " + pProverRequest->aggregatedProofInput1["publics"][19 + i].dump() + "!=" + pProverRequest->aggregatedProofInput2["publics"][0 + i].dump());
-            pProverRequest->result = ZKR_AGGREGATED_PROOF_INVALID_INPUT;
-            return;
+            "inputs": [
+                {
+                    "name": ")" + pProverRequest->uuid + R"(-agg-1.json",
+                    "source": {
+                        "Url": ")" + inputFile + R"("
+                    }
+                },
+                {
+                    "name": ")" + pProverRequest->uuid + R"(-agg-2.json",
+                    "source": {
+                        "Url": ")" + inputFile2 + R"("
+                    }
+                }
+            ],
+            "outputs": [
+                "proof.dat"
+            ],
+            "proof": "AGGREGATED_PROOF",
+            "prover": {
+                "prover_hash": "1ce2fbc27ecb8cb658b25e0db8e13a066159997454df7bd8c532c5aa52244e6e",
+                "schema": "Katla",
+                "verifier_hash": "457e6d8e87c5320142c80f0f8a933e9595f574819bc50f5eb3f41a677f0e7690"
+            },
+            "timeout": 900
         }
-    }
-    // Check midAccInputHash0
-    for (int i = 0; i < 8; i++)
-    {
-        if (pProverRequest->aggregatedProofInput1["publics"][27 + i] != pProverRequest->aggregatedProofInput2["publics"][8 + i])
-        {
-            zklog.error("Prover::genAggregatedProof() newAccInputHash and oldAccInputHash are not consistent" + pProverRequest->aggregatedProofInput1["publics"][27 + i].dump() + "!=" + pProverRequest->aggregatedProofInput2["publics"][8 + i].dump());
-            pProverRequest->result = ZKR_AGGREGATED_PROOF_INVALID_INPUT;
-            return;
-        }
-    }
-    // Check batchNum
-    if (pProverRequest->aggregatedProofInput1["publics"][43] != pProverRequest->aggregatedProofInput2["publics"][16])
-    {
-        zklog.error("Prover::genAggregatedProof() newBatchNum and oldBatchNum are not consistent" + pProverRequest->aggregatedProofInput1["publics"][43].dump() + "!=" + pProverRequest->aggregatedProofInput2["publics"][16].dump());
-        pProverRequest->result = ZKR_AGGREGATED_PROOF_INVALID_INPUT;
-        return;
-    }
+    )";
+    zklog.info("genAggregatedProof() Gevulot Message: " + message);
 
-    json zkinInputRecursive2 = joinzkin(pProverRequest->aggregatedProofInput1, pProverRequest->aggregatedProofInput2, verKey, starksRecursive2->starkInfo.starkStruct.steps.size());
-    json recursive2Verkey;
-    file2json(config.recursive2Verkey, recursive2Verkey);
+    std::string response_str = client.send_and_receive(message);
+    zklog.info("genAggregatedProof() Gevulot Response: " + response_str);
 
-    Goldilocks::Element recursive2VerkeyValues[4];
-    recursive2VerkeyValues[0] = Goldilocks::fromU64(recursive2Verkey["constRoot"][0]);
-    recursive2VerkeyValues[1] = Goldilocks::fromU64(recursive2Verkey["constRoot"][1]);
-    recursive2VerkeyValues[2] = Goldilocks::fromU64(recursive2Verkey["constRoot"][2]);
-    recursive2VerkeyValues[3] = Goldilocks::fromU64(recursive2Verkey["constRoot"][3]);
+    json response = json::parse(response_str);
+    zklog.info("genAggregatedProof() Converted Gevulot Response to JSON");
 
-    Goldilocks::Element publics[starksRecursive2->starkInfo.nPublics];
+    json gev_tx = json::parse(response["tx_result"].get<std::string>());
+    zklog.info("genAggregatedProof() Getting Gevulot Transaction JSON: " + gev_tx.dump());
 
-    for (uint64_t i = 0; i < starkZkevm->starkInfo.nPublics; i++)
-    {
-        publics[i] = Goldilocks::fromString(zkinInputRecursive2["publics"][i]);
-    }
+    std::string proof_url = gev_tx["payload"]["Verification"]["files"][0]["url"].get<std::string>();
+    zklog.info("genAggregatedProof() Proof file URL: " + proof_url);
 
-    for (uint64_t i = 0; i < recursive2Verkey["constRoot"].size(); i++)
-    {
-        publics[starkZkevm->starkInfo.nPublics + i] = Goldilocks::fromU64(recursive2Verkey["constRoot"][i]);
-    }
-
-    CommitPolsStarks cmPolsRecursive2(pAddress, (1 << starksRecursive2->starkInfo.starkStruct.nBits), starksRecursive2->starkInfo.nCm1);
-    CircomRecursive2::getCommitedPols(&cmPolsRecursive2, config.recursive2Verifier, config.recursive2Exec, zkinInputRecursive2, (1 << starksRecursive2->starkInfo.starkStruct.nBits), starksRecursive2->starkInfo.nCm1);
-
-    // void *pointerCmRecursive2Pols = mapFile("config/recursive2/recursive2.commit", cmPolsRecursive2.size(), true);
-    // memcpy(pointerCmRecursive2Pols, cmPolsRecursive2.address(), cmPolsRecursive2.size());
-    // unmapFile(pointerCmRecursive2Pols, cmPolsRecursive2.size());
-
-    //-------------------------------------------
-    // Generate Recursive 2 proof
-    //-------------------------------------------
-
-    TimerStart(STARK_RECURSIVE_2_PROOF_BATCH_PROOF);
-    uint64_t polBitsRecursive2 = starksRecursive2->starkInfo.starkStruct.steps[starksRecursive2->starkInfo.starkStruct.steps.size() - 1].nBits;
-    FRIProof fproofRecursive2((1 << polBitsRecursive2), FIELD_EXTENSION, starksRecursive2->starkInfo.starkStruct.steps.size(), starksRecursive2->starkInfo.evMap.size(), starksRecursive2->starkInfo.nPublics);
-    Recursive2Steps recursive2Steps;
-    starksRecursive2->genProof(fproofRecursive2, publics, recursive2VerkeyValues, &recursive2Steps);
-    TimerStopAndLog(STARK_RECURSIVE_2_PROOF_BATCH_PROOF);
-
-    // Save the proof & zkinproof
-    nlohmann::ordered_json jProofRecursive2 = fproofRecursive2.proofs.proof2json();
-    nlohmann::ordered_json zkinRecursive2 = proof2zkinStark(jProofRecursive2);
-    zkinRecursive2["publics"] = zkinInputRecursive2["publics"];
-
-    // Output is pProverRequest->aggregatedProofOutput (of type json)
-    pProverRequest->aggregatedProofOutput = zkinRecursive2;
-
-    // Save output to file
-    if (config.saveOutputToFile)
-    {
-        json2file(pProverRequest->aggregatedProofOutput, pProverRequest->filePrefix + "aggregated_proof.output.json");
-    }
-    // Save proof to file
-    if (config.saveProofToFile)
-    {
-        jProofRecursive2["publics"] = zkinInputRecursive2["publics"];
-        json2file(jProofRecursive2, pProverRequest->filePrefix + "aggregated_proof.proof.json");
-    }
-
-    // Add the recursive2 verification key
-    json publicsJson = json::array();
-
-    file2json(config.recursive2Verkey, recursive2Verkey);
-
-    for (uint64_t i = 0; i < starkZkevm->starkInfo.nPublics; i++)
-    {
-        publicsJson[i] = zkinInputRecursive2["publics"][i];
-    }
-    // Add the recursive2 verification key
-    publicsJson[44] = to_string(recursive2Verkey["constRoot"][0]);
-    publicsJson[45] = to_string(recursive2Verkey["constRoot"][1]);
-    publicsJson[46] = to_string(recursive2Verkey["constRoot"][2]);
-    publicsJson[47] = to_string(recursive2Verkey["constRoot"][3]);
-
-    json2file(publicsJson, pProverRequest->publicsOutputFile());
-
-    pProverRequest->result = ZKR_SUCCESS;
+    ordered_json proof;
+    url2json(proof_url, proof);
+    
+    pProverRequest->aggregatedProofOutput = proof;
 
     TimerStopAndLog(PROVER_AGGREGATED_PROOF);
 }
@@ -625,154 +542,59 @@ void Prover::genFinalProof(ProverRequest *pProverRequest)
     printMemoryInfo(true);
     printProcessInfo(true);
 
-    // Save input to file
-    if (config.saveInputToFile)
-    {
-        json2file(pProverRequest->finalProofInput, pProverRequest->filePrefix + "final_proof.input.json");
-    }
+    zklog.info("Prover::genFinalProof() timestamp: " + pProverRequest->timestamp);
+    zklog.info("Prover::genFinalProof() UUID: " + pProverRequest->uuid);
+    zklog.info("Prover::genFinalProof() input file: " + pProverRequest->inputFile());
 
-    // Input is pProverRequest->finalProofInput (of type json)
-    std::string strAddress = mpz_get_str(0, 16, pProverRequest->input.publicInputsExtended.publicInputs.aggregatorAddress.get_mpz_t());
-    std::string strAddress10 = mpz_get_str(0, 10, pProverRequest->input.publicInputsExtended.publicInputs.aggregatorAddress.get_mpz_t());
+    json inputJson;
+    pProverRequest->input.save(inputJson);
+    std::string inputFile = json2aws(inputJson, pProverRequest->uuid);
+    zklog.info("genFinalProof() Uploaded input file: " + inputFile);
 
-    json zkinFinal = pProverRequest->finalProofInput;
-
-    Goldilocks::Element publics[starksRecursiveF->starkInfo.nPublics];
-
-    for (uint64_t i = 0; i < starksRecursiveF->starkInfo.nPublics; i++)
-    {
-        publics[i] = Goldilocks::fromString(zkinFinal["publics"][i]);
-    }
-
-    CommitPolsStarks cmPolsRecursiveF(pAddressStarksRecursiveF, (1 << starksRecursiveF->starkInfo.starkStruct.nBits), starksRecursiveF->starkInfo.nCm1);
-    CircomRecursiveF::getCommitedPols(&cmPolsRecursiveF, config.recursivefVerifier, config.recursivefExec, zkinFinal, (1 << starksRecursiveF->starkInfo.starkStruct.nBits), starksRecursiveF->starkInfo.nCm1);
-
-    // void *pointercmPolsRecursiveF = mapFile("config/recursivef/recursivef.commit", cmPolsRecursiveF.size(), true);
-    // memcpy(pointercmPolsRecursiveF, cmPolsRecursiveF.address(), cmPolsRecursiveF.size());
-    // unmapFile(pointercmPolsRecursiveF, cmPolsRecursiveF.size());
-
-    //  ----------------------------------------------
-    //  Generate Recursive Final proof
-    //  ----------------------------------------------
-
-    TimerStart(STARK_RECURSIVE_F_PROOF_BATCH_PROOF);
-    uint64_t polBitsRecursiveF = starksRecursiveF->starkInfo.starkStruct.steps[starksRecursiveF->starkInfo.starkStruct.steps.size() - 1].nBits;
-    FRIProofC12 fproofRecursiveF((1 << polBitsRecursiveF), FIELD_EXTENSION, starksRecursiveF->starkInfo.starkStruct.steps.size(), starksRecursiveF->starkInfo.evMap.size(), starksRecursiveF->starkInfo.nPublics);
-    starksRecursiveF->genProof(fproofRecursiveF, publics);
-    TimerStopAndLog(STARK_RECURSIVE_F_PROOF_BATCH_PROOF);
-
-    // Save the proof & zkinproof
-    nlohmann::ordered_json jProofRecursiveF = fproofRecursiveF.proofs.proof2json();
-    json zkinRecursiveF = proof2zkinStark(jProofRecursiveF);
-    zkinRecursiveF["publics"] = zkinFinal["publics"];
-    zkinRecursiveF["aggregatorAddr"] = strAddress10;
-
-    // Save proof to file
-    if (config.saveProofToFile)
-    {
-        json2file(zkinRecursiveF["publics"], pProverRequest->filePrefix + "publics.json");
-
-        jProofRecursiveF["publics"] = zkinRecursiveF["publics"];
-        json2file(jProofRecursiveF, pProverRequest->filePrefix + "recursivef.proof.json");
-    }
-
-    //  ----------------------------------------------
-    //  Verifier final
-    //  ----------------------------------------------
-
-    TimerStart(CIRCOM_LOAD_CIRCUIT_FINAL);
-    CircomFinal::Circom_Circuit *circuitFinal = CircomFinal::loadCircuit(config.finalVerifier);
-    TimerStopAndLog(CIRCOM_LOAD_CIRCUIT_FINAL);
-
-    TimerStart(CIRCOM_FINAL_LOAD_JSON);
-    CircomFinal::Circom_CalcWit *ctxFinal = new CircomFinal::Circom_CalcWit(circuitFinal);
-
-    CircomFinal::loadJsonImpl(ctxFinal, zkinRecursiveF);
-    if (ctxFinal->getRemaingInputsToBeSet() != 0)
-    {
-        zklog.error("Prover::genProof() Not all inputs have been set. Only " + to_string(CircomFinal::get_main_input_signal_no() - ctxFinal->getRemaingInputsToBeSet()) + " out of " + to_string(CircomFinal::get_main_input_signal_no()));
-        exitProcess();
-    }
-    TimerStopAndLog(CIRCOM_FINAL_LOAD_JSON);
-
-    TimerStart(CIRCOM_GET_BIN_WITNESS_FINAL);
-    AltBn128::FrElement *pWitnessFinal = NULL;
-    uint64_t witnessSizeFinal = 0;
-    CircomFinal::getBinWitness(ctxFinal, pWitnessFinal, witnessSizeFinal);
-    CircomFinal::freeCircuit(circuitFinal);
-    delete ctxFinal;
-
-    TimerStopAndLog(CIRCOM_GET_BIN_WITNESS_FINAL);
-
-    TimerStart(SAVE_PUBLICS_JSON);
-    // Save public file
-    json publicJson;
-    AltBn128::FrElement aux;
-    AltBn128::Fr.toMontgomery(aux, pWitnessFinal[1]);
-    publicJson[0] = AltBn128::Fr.toString(aux);
-    json2file(publicJson, pProverRequest->publicsOutputFile());
-    TimerStopAndLog(SAVE_PUBLICS_JSON);
-
-    if (Zkey::GROTH16_PROTOCOL_ID != protocolId)
-    {
-        TimerStart(RAPID_SNARK);
-        try
+    WebSocketClient client;
+    client.connect(config.gevsonURL);
+    std::string message = R"(
         {
-            auto [jsonProof, publicSignalsJson] = prover->prove(pWitnessFinal);
-            // Save proof to file
-            if (config.saveProofToFile)
-            {
-                json2file(jsonProof, pProverRequest->filePrefix + "final_proof.proof.json");
-            }
-            TimerStopAndLog(RAPID_SNARK);
-
-            // Populate Proof with the correct data
-            PublicInputsExtended publicInputsExtended;
-            publicInputsExtended.publicInputs = pProverRequest->input.publicInputsExtended.publicInputs;
-            pProverRequest->proof.load(jsonProof, publicSignalsJson);
-
-            pProverRequest->result = ZKR_SUCCESS;
+            "inputs": [
+                {
+                    "name": ")" + pProverRequest->uuid + R"(.json",
+                    "source": {
+                        "Url": ")" + inputFile + R"("
+                    }
+                }
+            ],
+            "outputs": [
+                "proof.dat"
+            ],
+            "proof": "AGGREGATED_PROOF",
+            "prover": {
+                "prover_hash": "1ce2fbc27ecb8cb658b25e0db8e13a066159997454df7bd8c532c5aa52244e6e",
+                "schema": "Katla",
+                "verifier_hash": "457e6d8e87c5320142c80f0f8a933e9595f574819bc50f5eb3f41a677f0e7690"
+            },
+            "timeout": 900
         }
-        catch (std::exception &e)
-        {
-            zklog.error("Prover::genProof() got exception in rapid SNARK:" + string(e.what()));
-            exitProcess();
-        }
-    }
-    else
-    {
-        // Generate Groth16 via rapid SNARK
-        TimerStart(RAPID_SNARK);
-        json jsonProof;
-        try
-        {
-            auto proof = groth16Prover->prove(pWitnessFinal);
-            jsonProof = proof->toJson();
-        }
-        catch (std::exception &e)
-        {
-            zklog.error("Prover::genProof() got exception in rapid SNARK:" + string(e.what()));
-            exitProcess();
-        }
-        TimerStopAndLog(RAPID_SNARK);
+    )";
+    zklog.info("genFinalProof() Gevulot Message: " + message);
 
-        // Save proof to file
-        if (config.saveProofToFile)
-        {
-            json2file(jsonProof, pProverRequest->filePrefix + "final_proof.proof.json");
-        }
-        // Populate Proof with the correct data
-        PublicInputsExtended publicInputsExtended;
-        publicInputsExtended.publicInputs = pProverRequest->input.publicInputsExtended.publicInputs;
-        pProverRequest->proof.load(jsonProof, publicJson);
+    std::string response_str = client.send_and_receive(message);
+    zklog.info("genFinalProof() Gevulot Response: " + response_str);
 
-        pProverRequest->result = ZKR_SUCCESS;
-    }
+    json response = json::parse(response_str);
+    zklog.info("genFinalProof() Converted Gevulot Response to JSON");
 
-    /***********/
-    /* Cleanup */
-    /***********/
-    free(pWitnessFinal);
+    json gev_tx = json::parse(response["tx_result"].get<std::string>());
+    zklog.info("genFinalProof() Getting Gevulot Transaction JSON: " + gev_tx.dump());
+
+    std::string proof_url = gev_tx["payload"]["Verification"]["files"][0]["url"].get<std::string>();
+    std::string public_url = gev_tx["payload"]["Verification"]["files"][1]["url"].get<std::string>();
+    zklog.info("genFinalProof() Proof file URL: " + proof_url);
+
+    ordered_json proof;
+    url2json(proof_url, proof);
+
+    json publicJson = json::parse("[]");
+    pProverRequest->proof.load(proof, publicJson);
 
     TimerStopAndLog(PROVER_FINAL_PROOF);
 }

@@ -88,7 +88,40 @@ void testGenBatchProof(Goldilocks fr, Prover &prover, Config &config)
     }
 
     prover.genBatchProof(&proverRequest);
-    zklog.info("Generated proof: " + proverRequest.batchProofOutput.dump());
+    zklog.info("testGenBatchProof() Generated proof: " + proverRequest.batchProofOutput.dump());
+}
+
+void testGenAggregatedProof(Goldilocks fr, Prover &prover, Config &config)
+{
+    TimerStart(INPUT_LOAD);
+
+    ProverRequest proverRequest(fr, config, prt_genAggregatedProof);
+    if (config.inputFile.size() > 0)
+    {
+        file2json(config.inputFile, proverRequest.aggregatedProofInput1);
+    }
+    if (config.inputFile2.size() > 0)
+    {
+        file2json(config.inputFile2, proverRequest.aggregatedProofInput2);
+    }
+    TimerStopAndLog(INPUT_LOAD);
+
+    prover.genAggregatedProof(&proverRequest);
+    zklog.info("testGenAggregatedProof() Generated proof: " + proverRequest.aggregatedProofOutput.dump());
+}
+
+void testGenFinalProof(Goldilocks fr, Prover &prover, Config &config)
+{
+    TimerStart(INPUT_LOAD);
+    ProverRequest proverRequest(fr, config, prt_genFinalProof);
+    if (config.inputFile.size() > 0)
+    {
+        file2json(config.inputFile, proverRequest.finalProofInput);
+    }
+    TimerStopAndLog(INPUT_LOAD);
+
+    prover.genFinalProof(&proverRequest);
+    zklog.info("testGenFinalProof() Generated proof: " + proverRequest.proof.getStringProof());
 }
 
 int main(int argc, char **argv)
@@ -266,21 +299,53 @@ int main(int argc, char **argv)
         if (config.inputFile.back() == '/')
         {
             Config tmpConfig = config;
-            // Get files sorted alphabetically from the folder
             vector<string> files = getFolderFiles(config.inputFile, true);
-            // Process each input file in order
             for (size_t i = 0; i < files.size(); i++)
             {
                 tmpConfig.inputFile = config.inputFile + files[i];
                 zklog.info("testGenBatchProof inputFile=" + tmpConfig.inputFile);
-                // Call the prover
                 testGenBatchProof(fr, prover, tmpConfig);
             }
         }
         else
         {
-            // Call the prover
             testGenBatchProof(fr, prover, config);
+        }
+    }
+
+    if (config.runFileGenAggregatedProof)
+    {
+        if (config.inputFile.back() == '/')
+        {
+            Config tmpConfig = config;
+            vector<string> files = getFolderFiles(config.inputFile, true);
+            for (size_t i = 0; i < files.size(); i++)
+            {
+                tmpConfig.inputFile = config.inputFile + files[i];
+                testGenAggregatedProof(fr, prover, tmpConfig);
+            }
+        }
+        else
+        {
+            testGenAggregatedProof(fr, prover, config);
+        }
+    }
+
+    if (config.runFileGenFinalProof)
+    {
+        if (config.inputFile.back() == '/')
+        {
+            Config tmpConfig = config;
+            vector<string> files = getFolderFiles(config.inputFile, true);
+            for (size_t i = 0; i < files.size(); i++)
+            {
+                tmpConfig.inputFile = config.inputFile + files[i];
+                testGenFinalProof(fr, prover, tmpConfig);
+            }
+        }
+        else
+        {
+            testGenFinalProof(fr, prover, config);
         }
     }
 
