@@ -219,11 +219,11 @@ string getUUID(void)
 
 std::string json2aws(const json &jsonData, const std::string &fileName)
 {
-    std::string filePath = "output/" + fileName + ".json";
+    std::string filePath = "inputs/" + fileName + ".json";
     json2file(jsonData, filePath);
 
     std::string command = "s3cmd put " + filePath + 
-        " s3://" + config.awsBucketName + "/" + "inputs/" + fileName + ".json" + 
+        " s3://" + config.awsBucketName + "/" + filePath + 
         " --region=" + config.awsRegion;
     
     zklog.info("S3 Upload command: " + command);
@@ -235,7 +235,7 @@ std::string json2aws(const json &jsonData, const std::string &fileName)
         exitProcess();
     }
 
-    return "https://" + config.awsBucketName + ".s3." + config.awsRegion + ".amazonaws.com/" + filePath + ".json";
+    return "https://" + config.awsBucketName + ".s3." + config.awsRegion + ".amazonaws.com/" + filePath;
 }
 
 void json2file(const json &j, const string &fileName)
