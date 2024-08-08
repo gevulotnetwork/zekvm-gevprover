@@ -432,9 +432,9 @@ void Prover::genBatchProof(ProverRequest *pProverRequest)
             ],
             "proof": "BATCH_PROOF",
             "prover": {
-                "prover_hash": "1ce2fbc27ecb8cb658b25e0db8e13a066159997454df7bd8c532c5aa52244e6e",
+                "prover_hash": "691c8479b8305dda72718d383621f0b58ad27c8c44030731832983b1de55b16f",
                 "schema": "Katla",
-                "verifier_hash": "457e6d8e87c5320142c80f0f8a933e9595f574819bc50f5eb3f41a677f0e7690"
+                "verifier_hash": "017f9beec285ee0b981b1daa1095ac334ae529992950936ff2412700cce3b934"
             },
             "timeout": 900
         }
@@ -502,9 +502,9 @@ void Prover::genAggregatedProof(ProverRequest *pProverRequest)
             ],
             "proof": "AGGREGATED_PROOF",
             "prover": {
-                "prover_hash": "1ce2fbc27ecb8cb658b25e0db8e13a066159997454df7bd8c532c5aa52244e6e",
+                "prover_hash": "691c8479b8305dda72718d383621f0b58ad27c8c44030731832983b1de55b16f",
                 "schema": "Katla",
-                "verifier_hash": "457e6d8e87c5320142c80f0f8a933e9595f574819bc50f5eb3f41a677f0e7690"
+                "verifier_hash": "017f9beec285ee0b981b1daa1095ac334ae529992950936ff2412700cce3b934"
             },
             "timeout": 900
         }
@@ -568,9 +568,9 @@ void Prover::genFinalProof(ProverRequest *pProverRequest)
             ],
             "proof": "AGGREGATED_PROOF",
             "prover": {
-                "prover_hash": "1ce2fbc27ecb8cb658b25e0db8e13a066159997454df7bd8c532c5aa52244e6e",
+                "prover_hash": "691c8479b8305dda72718d383621f0b58ad27c8c44030731832983b1de55b16f",
                 "schema": "Katla",
-                "verifier_hash": "457e6d8e87c5320142c80f0f8a933e9595f574819bc50f5eb3f41a677f0e7690"
+                "verifier_hash": "017f9beec285ee0b981b1daa1095ac334ae529992950936ff2412700cce3b934"
             },
             "timeout": 900
         }
