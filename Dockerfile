@@ -11,6 +11,12 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update -y && \
 WORKDIR /usr/src/app
 
 COPY ./src ./src
+
+WORKDIR /usr/src/app/src/grpc
+RUN make
+
+WORKDIR /usr/src/app
+
 COPY ./test ./test
 COPY ./tools ./tools
 COPY Makefile .
