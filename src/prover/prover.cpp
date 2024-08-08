@@ -479,11 +479,11 @@ void Prover::genFinalProof(ProverRequest *pProverRequest)
     zklog.info("Prover::genFinalProof() UUID: " + pProverRequest->uuid);
     zklog.info("Prover::genFinalProof() input file: " + pProverRequest->inputFile());
 
-    json inputJson;
-    pProverRequest->input.save(inputJson);
+    // json inputJson;
+    // pProverRequest->input.save(inputJson);
 
     Gevson gevson("~/img/localkey.pki", "http://localhost:9944");
-    std::vector<json> gevInput = {inputJson};
+    std::vector<json> gevInput = {pProverRequest->finalProofInput};
     json gev_tx = gevson.generateProof(gevInput, std::string("FINAL_PROOF"));
 
     zklog.info("genFinalProof() Getting Gevulot Transaction JSON: " + gev_tx.dump());
