@@ -16,7 +16,7 @@ private:
     std::string keyfile;
     std::string jsonurl;
 
-    bool validateInput(const std::vector<std::string> &files, const std::string &proofType);
+    bool validateInput(size_t fileCount, const std::string& proofType);
     std::string exec(const char *cmd);
     std::string calculateHash(const std::string &file);
     std::string executeCommand(const std::vector<std::string> &hashes, const std::vector<std::string> &fileUrls, const std::string &proofType);

@@ -40,11 +40,17 @@ json Gevson::generateProof(const std::vector<json> &jsonFiles, const std::string
     return getTx(nodeHash);
 }
 
-bool Gevson::validateInput(const std::vector<std::string> &files, const std::string &proofType)
+bool Gevson::validateInput(size_t fileCount, const std::string &proofType)
 {
-    if ((proofType == "BATCH_PROOF" && files.size() != 1) ||
-        (proofType == "AGGREGATED_PROOF" && files.size() != 2) ||
-        (proofType == "FINAL_PROOF" && files.size() != 1))
+    if (proofType == "BATCH_PROOF" && fileCount != 1)
+    {
+        return false;
+    }
+    else if (proofType == "AGGREGATED_PROOF" && fileCount != 2)
+    {
+        return false;
+    }
+    else if (proofType == "FINAL_PROOF" && fileCount != 1)
     {
         return false;
     }
