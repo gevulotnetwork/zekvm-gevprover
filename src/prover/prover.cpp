@@ -426,7 +426,7 @@ void Prover::genBatchProof(ProverRequest *pProverRequest)
 
     ordered_json proof;
     url2json(proof_url, proof);
-    
+
     pProverRequest->batchProofOutput = proof;
 
     TimerStopAndLog(PROVER_BATCH_PROOF);
@@ -447,49 +447,13 @@ void Prover::genAggregatedProof(ProverRequest *pProverRequest)
     zklog.info("Prover::genAggregatedProof() UUID: " + pProverRequest->uuid);
     zklog.info("Prover::genAggregatedProof() input file: " + pProverRequest->inputFile());
 
-    std::string inputFile = json2aws(pProverRequest->aggregatedProofInput1, pProverRequest->uuid + std::string("-agg-1"));
-    std::string inputFile2 = json2aws(pProverRequest->aggregatedProofInput2, pProverRequest->uuid + std::string("-agg-2"));
-    zklog.info("genAggregatedProof() Uploaded input file: " + inputFile);
+    Gevson gevson("~/img/localkey.pki", "http://localhost:9944");
+    std::vector<json> gevInput = {pProverRequest->aggregatedProofInput1, pProverRequest->aggregatedProofInput2};
 
-    WebSocketClient client;
-    client.connect(config.gevsonURL);
-    std::string message = R"(
-        {
-            "inputs": [
-                {
-                    "name": ")" + pProverRequest->uuid + R"(-agg-1.json",
-                    "source": {
-                        "Url": ")" + inputFile + R"("
-                    }
-                },
-                {
-                    "name": ")" + pProverRequest->uuid + R"(-agg-2.json",
-                    "source": {
-                        "Url": ")" + inputFile2 + R"("
-                    }
-                }
-            ],
-            "outputs": [
-                "proof.dat"
-            ],
-            "proof": "AGGREGATED_PROOF",
-            "prover": {
-                "prover_hash": "691c8479b8305dda72718d383621f0b58ad27c8c44030731832983b1de55b16f",
-                "schema": "Katla",
-                "verifier_hash": "017f9beec285ee0b981b1daa1095ac334ae529992950936ff2412700cce3b934"
-            },
-            "timeout": 900
-        }
-    )";
-    zklog.info("genAggregatedProof() Gevulot Message: " + message);
+    json gev_tx = gevson.generateProof(gevInput, std::string("AGGREGATED_PROOF"));
+    zklog.info("genAggregatedProof() Getting Gevulot Transaction JSON: " + gev_tx.dump());
 
-    std::string response_str = client.send_and_receive(message);
-    zklog.info("genAggregatedProof() Gevulot Response: " + response_str);
-
-    json response = json::parse(response_str);
-    zklog.info("genAggregatedProof() Converted Gevulot Response to JSON");
-
-    json gev_tx = json::parse(response["tx_result"].get<std::string>());
+    std::string proof_url = gev_tx["payload"]["Proof"]["files"][0]["url"].get<std::string>();
     zklog.info("genAggregatedProof() Getting Gevulot Transaction JSON: " + gev_tx.dump());
 
     std::string proof_url = gev_tx["payload"]["Verification"]["files"][0]["url"].get<std::string>();
@@ -497,7 +461,7 @@ void Prover::genAggregatedProof(ProverRequest *pProverRequest)
 
     ordered_json proof;
     url2json(proof_url, proof);
-    
+
     pProverRequest->aggregatedProofOutput = proof;
 
     TimerStopAndLog(PROVER_AGGREGATED_PROOF);
@@ -529,9 +493,11 @@ void Prover::genFinalProof(ProverRequest *pProverRequest)
         {
             "inputs": [
                 {
-                    "name": ")" + pProverRequest->uuid + R"(.json",
+                    "name": ")" +
+                          pProverRequest->uuid + R"(.json",
                     "source": {
-                        "Url": ")" + inputFile + R"("
+                        "Url": ")" +
+                          inputFile + R"("
                     }
                 }
             ],

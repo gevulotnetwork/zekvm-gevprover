@@ -313,23 +313,23 @@ int main(int argc, char **argv)
         }
     }
 
-    // if (config.runFileGenAggregatedProof)
-    // {
-    //     if (config.inputFile.back() == '/')
-    //     {
-    //         Config tmpConfig = config;
-    //         vector<string> files = getFolderFiles(config.inputFile, true);
-    //         for (size_t i = 0; i < files.size(); i++)
-    //         {
-    //             tmpConfig.inputFile = config.inputFile + files[i];
-    //             testGenAggregatedProof(fr, prover, tmpConfig);
-    //         }
-    //     }
-    //     else
-    //     {
-    //         testGenAggregatedProof(fr, prover, config);
-    //     }
-    // }
+    if (config.runFileGenAggregatedProof)
+    {
+        if (config.inputFile.back() == '/')
+        {
+            Config tmpConfig = config;
+            vector<string> files = getFolderFiles(config.inputFile, true);
+            for (size_t i = 0; i < files.size(); i++)
+            {
+                tmpConfig.inputFile = config.inputFile + files[i];
+                testGenAggregatedProof(fr, prover, tmpConfig);
+            }
+        }
+        else
+        {
+            testGenAggregatedProof(fr, prover, config);
+        }
+    }
 
     // if (config.runFileGenFinalProof)
     // {
