@@ -55,4 +55,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y awscli && \
 WORKDIR /app/config
 
 WORKDIR /app
+
+RUN mkdir inputs
+
 ENTRYPOINT []
