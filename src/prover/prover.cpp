@@ -31,7 +31,6 @@
 #include "recursive2Steps.hpp"
 #include "zklog.hpp"
 #include "exit_process.hpp"
-#include "websocket_client.hpp"
 #include "gevson.hpp"
 
 #ifndef __AVX512__
