@@ -1,24 +1,24 @@
 FROM ubuntu:22.04 as build
 
-WORKDIR /usr/src/app
+RUN DEBIAN_FRONTEND=noninteractive apt-get update -y && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential libgmp-dev \
+    libbenchmark-dev nasm nlohmann-json3-dev libsecp256k1-dev libomp-dev \
+    libpqxx-dev git libssl-dev cmake libgrpc++-dev libprotobuf-dev grpc-proto \
+    libsodium-dev protobuf-compiler protobuf-compiler-grpc uuid-dev && \
+    rm -fr /var/cache/apt/*
 
-RUN apt update && apt install -y build-essential libgmp-dev libbenchmark-dev nasm nlohmann-json3-dev libsecp256k1-dev libomp-dev libpqxx-dev git libssl-dev cmake libgrpc++-dev libprotobuf-dev grpc-proto libsodium-dev protobuf-compiler protobuf-compiler-grpc uuid-dev
+WORKDIR /usr/src/app
 
 COPY ./src ./src
 COPY ./test ./test
 COPY ./tools ./tools
-COPY ./config ./config
 COPY Makefile .
 RUN make -j
 
-FROM ubuntu:22.04
 
-WORKDIR /usr/src/app
+FROM ubuntu:22.04 as executor
 
-RUN apt update && apt install -y build-essential libgmp-dev nlohmann-json3-dev libsecp256k1-dev libomp-dev libpqxx-dev libssl-dev libgrpc++-dev libprotobuf-dev grpc-proto libsodium-dev protobuf-compiler protobuf-compiler-grpc uuid-dev
-
-COPY --from=build /usr/src/app/build/zkProver /usr/local/bin
-
+WORKDIR /app
 COPY ./testvectors ./testvectors
 COPY ./config ./config
 COPY ./src/main_sm/fork_1/scripts/rom.json ./src/main_sm/fork_1/scripts/rom.json
@@ -26,6 +26,24 @@ COPY ./src/main_sm/fork_2/scripts/rom.json ./src/main_sm/fork_2/scripts/rom.json
 COPY ./src/main_sm/fork_3/scripts/rom.json ./src/main_sm/fork_3/scripts/rom.json
 COPY ./src/main_sm/fork_4/scripts/rom.json ./src/main_sm/fork_4/scripts/rom.json
 COPY ./src/main_sm/fork_5/scripts/rom.json ./src/main_sm/fork_5/scripts/rom.json
+COPY ./src/main_sm/fork_6/scripts/rom.json ./src/main_sm/fork_6/scripts/rom.json
 
-ENTRYPOINT [ "zkProver" ]
+RUN DEBIAN_FRONTEND=noninteractive apt update && \
+    DEBIAN_FRONTEND=noninteractive apt install -y libgmp-dev \
+    nlohmann-json3-dev libsecp256k1-dev libomp-dev libpqxx-dev libssl-dev \
+    libgrpc++-dev libprotobuf-dev grpc-proto libsodium-dev && \
+    rm -fr /var/cache/apt/*
 
+COPY --from=build /usr/src/app/build/zkProver /usr/local/bin/zkProver
+
+ENTRYPOINT []
+
+
+FROM executor as prover
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y awscli && \
+    rm -fr /var/cache/apt/*
+WORKDIR /app/config
+
+WORKDIR /app
+ENTRYPOINT []
