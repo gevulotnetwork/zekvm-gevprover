@@ -489,12 +489,16 @@ void Prover::genFinalProof(ProverRequest *pProverRequest)
     zklog.info("genFinalProof() Getting Gevulot Transaction JSON: " + gev_tx.dump());
 
     std::string proof_url = gev_tx["payload"]["Proof"]["files"][0]["url"].get<std::string>();
+    std::string public_url = gev_tx["payload"]["Proof"]["files"][1]["url"].get<std::string>();
     zklog.info("genFinalProof() Proof file URL: " + proof_url);
+    zklog.info("genFinalProof() Public file URL: " + public_url);
 
     json proof;
     url2json(proof_url, proof);
 
-    json publicJson = json::parse("[]");
+    json publicJson;
+    url2json(public_url, publicJson);
+
     pProverRequest->proof.load(proof, publicJson);
 
     TimerStopAndLog(PROVER_FINAL_PROOF);
