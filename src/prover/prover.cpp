@@ -32,6 +32,7 @@
 #include "zklog.hpp"
 #include "exit_process.hpp"
 #include "websocket_client.hpp"
+#include "gevson.hpp"
 
 #ifndef __AVX512__
 #define NROWS_STEPS_ 4
@@ -413,43 +414,14 @@ void Prover::genBatchProof(ProverRequest *pProverRequest)
 
     json inputJson;
     pProverRequest->input.save(inputJson);
-    std::string inputFile = json2aws(inputJson, pProverRequest->uuid);
-    zklog.info("Uploaded input file: " + inputFile);
-    WebSocketClient client;
-    client.connect(config.gevsonURL);
-    std::string message = R"(
-        {
-            "inputs": [
-                {
-                    "name": ")" + pProverRequest->uuid + R"(.json",
-                    "source": {
-                        "Url": ")" + inputFile + R"("
-                    }
-                }
-            ],
-            "outputs": [
-                "proof.dat"
-            ],
-            "proof": "BATCH_PROOF",
-            "prover": {
-                "prover_hash": "691c8479b8305dda72718d383621f0b58ad27c8c44030731832983b1de55b16f",
-                "schema": "Katla",
-                "verifier_hash": "017f9beec285ee0b981b1daa1095ac334ae529992950936ff2412700cce3b934"
-            },
-            "timeout": 900
-        }
-    )";
-    zklog.info("genBatchProof() Gevulot Message: " + message);
-    std::string response_str = client.send_and_receive(message);
-    zklog.info("genBatchProof() Gevulot Response: " + response_str);
 
-    json response = json::parse(response_str);
-    zklog.info("genBatchProof() Converted Gevulot Response to JSON");
+    Gevson gevson("~/img/localkey.pki", "http://localhost:9944");
+    std::vector<json> gevInput = {inputJson};
+    json gev_tx = gevson.generateProof(gevInput, std::string("BATCH_PROOF"));
 
-    json gev_tx = json::parse(response["tx_result"].get<std::string>());
     zklog.info("genBatchProof() Getting Gevulot Transaction JSON: " + gev_tx.dump());
 
-    std::string proof_url = gev_tx["payload"]["Verification"]["files"][0]["url"].get<std::string>();
+    std::string proof_url = gev_tx["payload"]["Proof"]["files"][0]["url"].get<std::string>();
     zklog.info("genBatchProof() Proof file URL: " + proof_url);
 
     ordered_json proof;
