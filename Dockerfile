@@ -58,7 +58,7 @@ WORKDIR /app
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
-ENV PATH=/root/.cargo/bin:$PATH
+ENV PATH=$HOME/.cargo/bin:$PATH
 
 RUN cargo install --git https://github.com/gevulotnetwork/gevulot.git gevulot-cli
 
