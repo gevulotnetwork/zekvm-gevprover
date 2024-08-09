@@ -126,7 +126,7 @@ void Gevson::waitForTxTree(const std::string &txHash)
         {
             break;
         }
-        std::this_thread::sleep_for(std::chrono::minutes(1));
+        std::this_thread::sleep_for(std::chrono::seconds(10));
     }
 }
 
