@@ -307,6 +307,11 @@ bool AggregatorClient::GenBatchProof (const aggregator::v1::GenBatchProofRequest
     // Submit the prover request
     zklog.info("SENDING TO PROVER");
     string uuid = prover.submitRequest(pProverRequest);
+
+    json inputToSave;
+    pProverRequest->input.save(inputToSave);
+    json2file(inputToSave, "output/node_batch_proof.json");
+    zklog.info("SAVED FILE");
     zklog.info("UUID RECEIVED FROM PROVER " + uuid);
 
     // Build the response as Ok, returning the UUID assigned by the prover to this request
