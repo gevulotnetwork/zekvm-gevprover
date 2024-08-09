@@ -372,6 +372,16 @@ int main(int argc, char **argv)
         sleep(5);
     }
 
+    // Create the HashDB server and run it, if configured
+    HashDBServer *pHashDBServer = NULL;
+    if (config.runHashDBServer)
+    {
+        pHashDBServer = new HashDBServer(fr, config);
+        zkassert(pHashDBServer != NULL);
+        zklog.info("Launching HashDB server thread...");
+        pHashDBServer->runThread();
+    }
+
     /* CLIENTS */
 
     // Create the executor client and run it, if configured
@@ -444,6 +454,13 @@ int main(int argc, char **argv)
         pExecutorServer->waitForThread();
     }
 
+    // Wait for HashDBServer thread to end
+    if (config.runHashDBServer && !config.runHashDBTest)
+    {
+        zkassert(pHashDBServer != NULL);
+        pHashDBServer->waitForThread();
+    }
+
     // Wait for the aggregator client thread to end
     if (config.runAggregatorClient)
     {
@@ -484,6 +501,11 @@ int main(int argc, char **argv)
     {
         delete pExecutorServer;
         pExecutorServer = NULL;
+    }
+    if (pHashDBServer != NULL)
+    {
+        delete pHashDBServer;
+        pHashDBServer = NULL;
     }
     if (pAggregatorServer != NULL)
     {
