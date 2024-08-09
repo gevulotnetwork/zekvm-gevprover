@@ -53,86 +53,8 @@ Prover::Prover(Goldilocks &fr,
 
     try
     {
-        if (config.generateProof())
-        {
-            zkey = BinFileUtils::openExisting(config.finalStarkZkey, "zkey", 1);
-            protocolId = Zkey::getProtocolIdFromZkey(zkey.get());
-            if (Zkey::GROTH16_PROTOCOL_ID == protocolId)
-            {
-                zkeyHeader = ZKeyUtils::loadHeader(zkey.get());
-
-                if (mpz_cmp(zkeyHeader->rPrime, altBbn128r) != 0)
-                {
-                    throw std::invalid_argument("zkey curve not supported");
-                }
-
-                groth16Prover = Groth16::makeProver<AltBn128::Engine>(
-                    zkeyHeader->nVars,
-                    zkeyHeader->nPublic,
-                    zkeyHeader->domainSize,
-                    zkeyHeader->nCoefs,
-                    zkeyHeader->vk_alpha1,
-                    zkeyHeader->vk_beta1,
-                    zkeyHeader->vk_beta2,
-                    zkeyHeader->vk_delta1,
-                    zkeyHeader->vk_delta2,
-                    zkey->getSectionData(4), // Coefs
-                    zkey->getSectionData(5), // pointsA
-                    zkey->getSectionData(6), // pointsB1
-                    zkey->getSectionData(7), // pointsB2
-                    zkey->getSectionData(8), // pointsC
-                    zkey->getSectionData(9)  // pointsH1
-                );
-            }
-
-            lastComputedRequestEndTime = 0;
-
-            sem_init(&pendingRequestSem, 0, 0);
-            pthread_mutex_init(&mutex, NULL);
-            pCurrentRequest = NULL;
-            pthread_create(&proverPthread, NULL, proverThread, this);
-            pthread_create(&cleanerPthread, NULL, cleanerThread, this);
-
-            StarkInfo _starkInfo(config, config.zkevmStarkInfo);
-
-            // Allocate an area of memory, mapped to file, to store all the committed polynomials,
-            // and create them using the allocated address
-            uint64_t polsSize = _starkInfo.mapTotalN * sizeof(Goldilocks::Element) + _starkInfo.mapSectionsN.section[eSection::cm3_2ns] * (1 << _starkInfo.starkStruct.nBitsExt) * sizeof(Goldilocks::Element);
-
-            zkassert(_starkInfo.mapSectionsN.section[eSection::cm1_2ns] * sizeof(Goldilocks::Element) <= polsSize - _starkInfo.mapSectionsN.section[eSection::cm2_2ns] * sizeof(Goldilocks::Element));
-
-            zkassert(PROVER_FORK_NAMESPACE::CommitPols::pilSize() <= polsSize);
-            zkassert(PROVER_FORK_NAMESPACE::CommitPols::pilSize() == _starkInfo.mapOffsets.section[cm2_n] * sizeof(Goldilocks::Element));
-
-            if (config.zkevmCmPols.size() > 0)
-            {
-                pAddress = mapFile(config.zkevmCmPols, polsSize, true);
-                zklog.info("Prover::genBatchProof() successfully mapped " + to_string(polsSize) + " bytes to file " + config.zkevmCmPols);
-            }
-            else
-            {
-                pAddress = calloc(polsSize, 1);
-                if (pAddress == NULL)
-                {
-                    zklog.error("Prover::genBatchProof() failed calling malloc() of size " + to_string(polsSize));
-                    exitProcess();
-                }
-                zklog.info("Prover::genBatchProof() successfully allocated " + to_string(polsSize) + " bytes");
-            }
-
-            prover = new Fflonk::FflonkProver<AltBn128::Engine>(AltBn128::Engine::engine, pAddress, polsSize);
-            prover->setZkey(zkey.get());
-
-            StarkInfo _starkInfoRecursiveF(config, config.recursivefStarkInfo);
-            pAddressStarksRecursiveF = (void *)malloc(_starkInfoRecursiveF.mapTotalN * sizeof(Goldilocks::Element));
-
-            starkZkevm = new Starks(config, {config.zkevmConstPols, config.mapConstPolsFile, config.zkevmConstantsTree, config.zkevmStarkInfo}, pAddress);
-            starkZkevm->nrowsStepBatch = NROWS_STEPS_;
-            starksC12a = new Starks(config, {config.c12aConstPols, config.mapConstPolsFile, config.c12aConstantsTree, config.c12aStarkInfo}, pAddress);
-            starksRecursive1 = new Starks(config, {config.recursive1ConstPols, config.mapConstPolsFile, config.recursive1ConstantsTree, config.recursive1StarkInfo}, pAddress);
-            starksRecursive2 = new Starks(config, {config.recursive2ConstPols, config.mapConstPolsFile, config.recursive2ConstantsTree, config.recursive2StarkInfo}, pAddress);
-            starksRecursiveF = new StarkRecursiveF(config, pAddressStarksRecursiveF);
-        }
+        pthread_create(&proverPthread, NULL, proverThread, this);
+        pthread_create(&cleanerPthread, NULL, cleanerThread, this);
     }
     catch (std::exception &e)
     {
@@ -305,6 +227,7 @@ void *cleanerThread(void *arg)
 
 string Prover::submitRequest(ProverRequest *pProverRequest) // returns UUID for this request
 {
+    zklog.info("SUBMITTING REQUEST TO PROVER");
     zkassert(config.generateProof());
     zkassert(pProverRequest != NULL);
 
@@ -321,6 +244,7 @@ string Prover::submitRequest(ProverRequest *pProverRequest) // returns UUID for 
     unlock();
 
     zklog.info("Prover::submitRequest() returns UUID: " + uuid);
+    zklog.info("REQUEST SUBMITTED");
     return uuid;
 }
 

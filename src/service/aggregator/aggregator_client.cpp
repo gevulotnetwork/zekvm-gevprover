@@ -111,7 +111,7 @@ bool AggregatorClient::GenBatchProof (const aggregator::v1::GenBatchProofRequest
 #ifdef LOG_SERVICE
     zklog.info("AggregatorClient::GenBatchProof() created a new prover request: " + to_string((uint64_t)pProverRequest));
 #endif
-
+    zklog.info("GEVPROVER GENERATING BATCH PROOF");
     // Parse public inputs
 
     // Get oldStateRoot
@@ -305,7 +305,9 @@ bool AggregatorClient::GenBatchProof (const aggregator::v1::GenBatchProofRequest
     }
 
     // Submit the prover request
+    zklog.info("SENDING TO PROVER");
     string uuid = prover.submitRequest(pProverRequest);
+    zklog.info("UUID RECEIVED FROM PROVER " + uuid);
 
     // Build the response as Ok, returning the UUID assigned by the prover to this request
     genBatchProofResponse.set_result(aggregator::v1::Result::RESULT_OK);
