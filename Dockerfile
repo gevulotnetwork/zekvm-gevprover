@@ -60,7 +60,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
 ENV PATH=$HOME/.cargo/bin:$PATH
 
-RUN cargo install --git https://github.com/gevulotnetwork/gevulot.git gevulot-cli
+RUN source $HOME/.cargo/env && cargo install --git https://github.com/gevulotnetwork/gevulot.git gevulot-cli
 
 RUN mkdir inputs
 
