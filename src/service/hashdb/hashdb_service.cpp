@@ -17,6 +17,7 @@ using grpc::Status;
 
 ::grpc::Status HashDBServiceImpl::Set(::grpc::ServerContext* context, const ::hashdb::v1::SetRequest* request, ::hashdb::v1::SetResponse* response)
 {
+    zklog.info("HashDB::Set -> request is: " + request->DebugString());
     // If the process is exising, do not start new activities
     if (bExitingProcess)
     {
@@ -50,12 +51,12 @@ using grpc::Status;
         // Get persistence flag
         Persistence persistence = (Persistence)request->persistence();
 
-#ifdef LOG_HASHDB_SERVICE
+// #ifdef LOG_HASHDB_SERVICE
         zklog.info("HashDBServiceImpl::Set() called. odlRoot=" + fea2string(fr, oldRoot[0], oldRoot[1], oldRoot[2], oldRoot[3]) +
             " key=" + fea2string(fr, key[0], key[1], key[2], key[3]) +
             " value=" +  value.get_str(16) +
             " persistent=" + to_string(persistent));
-#endif
+// #endif
         // Get database read log flag
         DatabaseMap *dbReadLog = NULL;
         if (request->get_db_read_log())
@@ -150,15 +151,18 @@ using grpc::Status;
         return Status::CANCELLED;
     }
 
-#ifdef LOG_HASHDB_SERVICE
+// #ifdef LOG_HASHDB_SERVICE
     zklog.info("HashDBServiceImpl::Set() completed. newRoot= " + fea2string(fr, r.newRoot[0], r.newRoot[1], r.newRoot[2], r.newRoot[3]));
-#endif
+// #endif
+    zklog.info("HashDB::Set -> response is: " + response->DebugString());
 
     return Status::OK;
 }
 
 ::grpc::Status HashDBServiceImpl::Get(::grpc::ServerContext* context, const ::hashdb::v1::GetRequest* request, ::hashdb::v1::GetResponse* response)
 {
+    zklog.info("HashDB::Get -> request is: " + request->DebugString());
+
     // If the process is exising, do not start new activities
     if (bExitingProcess)
     {
@@ -176,10 +180,10 @@ using grpc::Status;
         Goldilocks::Element key[4];
         grpc2fea (fr, request->key(), key);
 
-#ifdef LOG_HASHDB_SERVICE
+// #ifdef LOG_HASHDB_SERVICE
         zklog.info("HashDBServiceImpl::Get() called. root=" + fea2string(fr, root[0], root[1], root[2], root[3]) +
             " key=" + fea2string(fr, key[0], key[1], key[2], key[3]));
-#endif
+// #endif
 
         // Get database read log flag
         DatabaseMap *dbReadLog = NULL;
@@ -261,9 +265,10 @@ using grpc::Status;
         return Status::CANCELLED;
     }
 
-#ifdef LOG_HASHDB_SERVICE
+// #ifdef LOG_HASHDB_SERVICE
     zklog.info("HashDBServiceImpl::Get() completed. value=" +  r.value.get_str(16));
-#endif
+// #endif
+    zklog.info("HashDB::Get -> response is: " + response->DebugString());
 
     return Status::OK;
 }
@@ -289,7 +294,7 @@ using grpc::Status;
             data.push_back(request->data().at(i));
         }
 
-#ifdef LOG_HASHDB_SERVICE
+// #ifdef LOG_HASHDB_SERVICE
         {
             string s = "HashDBServiceImpl::SetProgram() called. key=" + fea2string(fr, key[0], key[1], key[2], key[3]) + " data=";
             for (uint64_t i=0; i<data.size(); i++)
@@ -297,7 +302,7 @@ using grpc::Status;
             s += " persistent=" + to_string(request->persistent());
             zklog.info(s);
         }
-#endif
+// #endif
         // Call set program
         zkresult r = pHashDB->setProgram(key, data, request->persistent());
 
@@ -312,9 +317,9 @@ using grpc::Status;
         return Status::CANCELLED;
     }
 
-#ifdef LOG_HASHDB_SERVICE
+// #ifdef LOG_HASHDB_SERVICE
     zklog.info("HashDBServiceImpl::SetProgram() completed.");
-#endif
+// #endif
 
     return Status::OK;
 }
@@ -333,9 +338,9 @@ using grpc::Status;
         Goldilocks::Element key[4];
         grpc2fea (fr, request->key(), key);
 
-#ifdef LOG_HASHDB_SERVICE
+// #ifdef LOG_HASHDB_SERVICE
         zklog.info("HashDBServiceImpl::GetProgram() called. key=" + fea2string(fr, key[0], key[1], key[2], key[3]));
-#endif
+// #endif
 
         // Call get program
         vector<uint8_t> value;
@@ -360,29 +365,30 @@ using grpc::Status;
         return Status::CANCELLED;
     }
 
-#ifdef LOG_HASHDB_SERVICE
+// #ifdef LOG_HASHDB_SERVICE
     {
         string s = "HashDBServiceImpl::GetProgram() completed. data=";
         for (uint64_t i=0; i<sData.size(); i++)
             s += byte2string(sData.at(i));
         zklog.info(s);
     }
-#endif
+// #endif
 
     return Status::OK;
 }
 
 ::grpc::Status HashDBServiceImpl::LoadDB(::grpc::ServerContext* context, const ::hashdb::v1::LoadDBRequest* request, ::google::protobuf::Empty* response)
 {
+    zklog.info("HashDB::LoadDB -> request is: " + request->DebugString());
     // If the process is exising, do not start new activities
     if (bExitingProcess)
     {
         return Status::CANCELLED;
     }
 
-#ifdef LOG_HASHDB_SERVICE
+// #ifdef LOG_HASHDB_SERVICE
     zklog.info("HashDBServiceImpl::LoadDB called.");
-#endif
+// #endif
 
     // Get Merkle tree map
     DatabaseMap::MTMap map;
@@ -396,9 +402,9 @@ using grpc::Status;
     // Call load database
     pHashDB->loadDB(map, request->persistent());
 
-#ifdef LOG_HASHDB_SERVICE
+// #ifdef LOG_HASHDB_SERVICE
     zklog.info("HashDBServiceImpl::LoadDB() completed.");
-#endif
+// #endif
 
     return Status::OK;
 }
@@ -411,9 +417,9 @@ using grpc::Status;
         return Status::CANCELLED;
     }
 
-#ifdef LOG_HASHDB_SERVICE
+// #ifdef LOG_HASHDB_SERVICE
     zklog.info("HashDBServiceImpl::LoadProgramDB called.");
-#endif
+// #endif
 
     // Get program map
     DatabaseMap::ProgramMap mapProgram;
@@ -427,9 +433,9 @@ using grpc::Status;
     // Call load program database
     pHashDB->loadProgramDB(mapProgram, request->persistent());
 
-#ifdef LOG_HASHDB_SERVICE
+// #ifdef LOG_HASHDB_SERVICE
     zklog.info("HashDBServiceImpl::LoadProgramDB() completed.");
-#endif
+// #endif
 
     return Status::OK;
 }
@@ -442,9 +448,9 @@ using grpc::Status;
         return Status::CANCELLED;
     }
 
-#ifdef LOG_HASHDB_SERVICE
+// #ifdef LOG_HASHDB_SERVICE
     zklog.info("HashDBServiceImpl::Flush called.");
-#endif
+// #endif
 
     try
     {
@@ -465,9 +471,9 @@ using grpc::Status;
         return Status::CANCELLED;
     }
 
-#ifdef LOG_HASHDB_SERVICE
+// #ifdef LOG_HASHDB_SERVICE
     zklog.info("HashDBServiceImpl::Flush() completed.");
-#endif
+// #endif
 
     return Status::OK;
 }
@@ -480,9 +486,9 @@ using grpc::Status;
         return Status::CANCELLED;
     }
 
-#ifdef LOG_HASHDB_SERVICE
+// #ifdef LOG_HASHDB_SERVICE
     zklog.info("HashDBServiceImpl::GetFlushStatus called.");
-#endif
+// #endif
 
     try
     {
@@ -512,9 +518,9 @@ using grpc::Status;
         return Status::CANCELLED;
     }
 
-#ifdef LOG_HASHDB_SERVICE
+// #ifdef LOG_HASHDB_SERVICE
     zklog.info("HashDBServiceImpl::GetFlushStatus() completed.");
-#endif
+// #endif
     
     return Status::OK;
 }
@@ -527,9 +533,9 @@ using grpc::Status;
         return Status::CANCELLED;
     }
 
-#ifdef LOG_HASHDB_SERVICE
+// #ifdef LOG_HASHDB_SERVICE
     zklog.info("HashDBServiceImpl::GetFlushData called.");
-#endif
+// #endif
 
     try
     {
@@ -567,9 +573,9 @@ using grpc::Status;
         return Status::CANCELLED;
     }
 
-#ifdef LOG_HASHDB_SERVICE
+// #ifdef LOG_HASHDB_SERVICE
     zklog.info("HashDBServiceImpl::GetFlushData() completed.");
-#endif
+// #endif
     
     return Status::OK;
 }
@@ -582,9 +588,9 @@ using grpc::Status;
         return Status::CANCELLED;
     }
 
-#ifdef LOG_HASHDB_SERVICE
+// #ifdef LOG_HASHDB_SERVICE
     zklog.info("HashDBServiceImpl::ConsolidateState called.");
-#endif
+// #endif
 
     try
     {
@@ -621,9 +627,9 @@ using grpc::Status;
         return Status::CANCELLED;
     }
 
-#ifdef LOG_HASHDB_SERVICE
+// #ifdef LOG_HASHDB_SERVICE
     zklog.info("HashDBServiceImpl::ConsolidateState() completed.");
-#endif
+// #endif
 
     return Status::OK;
 }
@@ -636,9 +642,9 @@ using grpc::Status;
         return Status::CANCELLED;
     }
 
-#ifdef LOG_HASHDB_SERVICE
+// #ifdef LOG_HASHDB_SERVICE
     zklog.info("HashDBServiceImpl::ReadTree called.");
-#endif
+// #endif
 
     try
     {
@@ -708,9 +714,9 @@ using grpc::Status;
         return Status::CANCELLED;
     }
 
-#ifdef LOG_HASHDB_SERVICE
+// #ifdef LOG_HASHDB_SERVICE
     zklog.info("HashDBServiceImpl::ReadTree() completed.");
-#endif
+// #endif
 
     return Status::OK;
 }
