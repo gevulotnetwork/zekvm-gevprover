@@ -32,6 +32,7 @@
 #include "zklog.hpp"
 #include "exit_process.hpp"
 #include "gevson.hpp"
+#include "hashdb_factory.hpp"
 
 #ifndef __AVX512__
 #define NROWS_STEPS_ 4
@@ -60,6 +61,14 @@ Prover::Prover(Goldilocks &fr,
         pCurrentRequest = NULL;
         pthread_create(&proverPthread, NULL, proverThread, this);
         pthread_create(&cleanerPthread, NULL, cleanerThread, this);
+
+        pHashDB = HashDBClientFactory::createHashDBClient(fr, config);
+        if (pHashDB == NULL)
+        {
+            zklog.error("MainExecutor::MainExecutor() failed calling HashDBClientFactory::createHashDBClient()");
+            exitProcess();
+        }
+        zklog.info("pHashDB is ready for use");
     }
     catch (std::exception &e)
     {
@@ -333,6 +342,10 @@ void Prover::genBatchProof(ProverRequest *pProverRequest)
 
     printMemoryInfo(true);
     printProcessInfo(true);
+
+    json dbJson;
+    pProverRequest->input.saveDatabase(dbJson);
+    json2file(dbJson, "output/db.json");
 
     zkassert(pProverRequest != NULL);
 

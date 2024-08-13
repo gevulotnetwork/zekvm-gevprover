@@ -23,6 +23,8 @@
 #include "starks.hpp"
 #include "constant_pols_starks.hpp"
 #include "fflonk_prover.hpp"
+#include "hashdb_factory.hpp"
+
 class Prover
 {
     Goldilocks &fr;
@@ -48,7 +50,7 @@ public:
     vector<ProverRequest *> pendingRequests;   // Queue of pending requests
     ProverRequest *pCurrentRequest;            // Request currently being processed by the prover thread in server mode
     vector<ProverRequest *> completedRequests; // Map uuid -> ProveRequest pointer
-
+    HashDBInterface *pHashDB;
 private:
     pthread_t proverPthread;  // Prover thread
     pthread_t cleanerPthread; // Garbage collector
