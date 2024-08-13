@@ -358,12 +358,7 @@ using grpc::Status;
         ::hashdb::v1::ResultCode* result = new ::hashdb::v1::ResultCode();
         result->set_code(static_cast<::hashdb::v1::ResultCode_Code>(r));
         response->set_allocated_result(result);
-    }
-    catch (const std::exception &e)
-    {
-        zklog.error("HashDBServiceImpl::GetProgram() exception: " + string(e.what()));
-        return Status::CANCELLED;
-    }
+
 
 // #ifdef LOG_HASHDB_SERVICE
     {
@@ -373,7 +368,12 @@ using grpc::Status;
         zklog.info(s);
     }
 // #endif
-
+    }
+    catch (const std::exception &e)
+    {
+        zklog.error("HashDBServiceImpl::GetProgram() exception: " + string(e.what()));
+        return Status::CANCELLED;
+    }
     return Status::OK;
 }
 
