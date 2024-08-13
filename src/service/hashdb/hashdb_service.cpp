@@ -55,7 +55,7 @@ using grpc::Status;
         zklog.info("HashDBServiceImpl::Set() called. odlRoot=" + fea2string(fr, oldRoot[0], oldRoot[1], oldRoot[2], oldRoot[3]) +
             " key=" + fea2string(fr, key[0], key[1], key[2], key[3]) +
             " value=" +  value.get_str(16) +
-            " persistent=" + to_string(persistent));
+            " persistent=" + to_string(persistence));
 // #endif
         // Get database read log flag
         DatabaseMap *dbReadLog = NULL;
