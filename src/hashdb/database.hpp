@@ -91,6 +91,7 @@ public:
     zkresult write(const string &_key, const Goldilocks::Element* vkey, const vector<Goldilocks::Element> &value, const bool persistent);
     zkresult getProgram(const string &_key, vector<uint8_t> &value, DatabaseMap *dbReadLog);
     zkresult setProgram(const string &_key, const vector<uint8_t> &value, const bool persistent);
+    zkresult readState(string &key, string &result);
     inline bool usingAssociativeCache(void){ return useAssociativeCache; };
 
 private:

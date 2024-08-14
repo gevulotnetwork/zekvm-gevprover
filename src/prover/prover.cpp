@@ -343,10 +343,6 @@ void Prover::genBatchProof(ProverRequest *pProverRequest)
     printMemoryInfo(true);
     printProcessInfo(true);
 
-    json dbJson;
-    pProverRequest->input.saveDatabase(dbJson);
-    json2file(dbJson, "output/db.json");
-
     zkassert(pProverRequest != NULL);
 
     zklog.info("Prover::genBatchProof() timestamp: " + pProverRequest->timestamp);
@@ -355,6 +351,11 @@ void Prover::genBatchProof(ProverRequest *pProverRequest)
 
     json inputJson;
     pProverRequest->input.save(inputJson);
+
+    std::string oldRoot = Remove0xIfPresent(inputJson["oldStateRoot"].get<std::string>());
+    std::string mtState;
+    pHashDB->readState(oldRoot, mtState);
+    zklog.info("genBatchProof() received state: " + mtState);
 
     Gevson gevson("~/img/localkey.pki", "http://localhost:9944");
     std::vector<json> gevInput = {inputJson};

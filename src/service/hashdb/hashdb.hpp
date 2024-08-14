@@ -51,7 +51,7 @@ public:
     zkresult readTree         (const Goldilocks::Element (&root)[4], vector<KeyValue> &keyValues, vector<HashValueGL> &hashValues);
     zkresult writeTree        (const Goldilocks::Element (&oldRoot)[4], const vector<KeyValue> &keyValues, Goldilocks::Element (&newRoot)[4], const bool persistent);
     zkresult cancelBatch      (const string &batchUUID);
-
+    void readState            (const string &oldRoot, string &value);
     // Methods added for testing purposes
     void setAutoCommit(const bool autoCommit);
     void commit();

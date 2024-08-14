@@ -533,3 +533,16 @@ void HashDB::hashSave(const Goldilocks::Element (&a)[8], const Goldilocks::Eleme
     tms.add("hashSave", TimeDiff(t));
 #endif
 }
+
+void readState(const string &oldRoot, string &value) 
+{
+    try
+    {
+        zkresult dbres = db.readState(oldRoot, value);
+        zklog.info("Old Root: " + value + ", Value: " + value);
+    }
+    catch(const std::exception& e)
+    {
+        zklog.info(string("getState() exception occured: ") + e.what());
+    }    
+}

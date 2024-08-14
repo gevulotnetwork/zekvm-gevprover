@@ -2677,7 +2677,8 @@ void MainExecutor::execute (ProverRequest &proverRequest, MainCommitPols &pols, 
                 {
                     proverRequest.programKeys.insert(fea2string(fr, aux));
                 }
-
+                
+                zklog.info("MainExecutor Fork 6 pHashDB->getProgram params are: " + fea2string(fr, aux) + ", " + std::string(hashValue.data.begin(), hashValue.data.end()));
                 zkresult zkResult = pHashDB->getProgram(aux, hashValue.data, proverRequest.dbReadLog);
                 if (zkResult != ZKR_SUCCESS)
                 {

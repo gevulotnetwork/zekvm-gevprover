@@ -1630,6 +1630,32 @@ zkresult Database::getFlushData(uint64_t flushId, uint64_t &storedFlushId, unord
     return ZKR_SUCCESS;
 }
 
+zkresult readState(string &key, string &result) {
+    zkresult r = readRemote(false, key, result);
+    if ( (r != ZKR_SUCCESS) && (config.dbReadRetryDelay > 0) )
+    {
+        for (uint64_t i=0; i<config.dbReadRetryCounter; i++)
+        {
+            zklog.warning("Database::read() failed calling readRemote() with error=" + zkresult2string(r) + "; will retry after " + to_string(config.dbReadRetryDelay) + "us key=" + key + " i=" + to_string(i));
+
+            // Retry after dbReadRetryDelay us
+            usleep(config.dbReadRetryDelay);
+            r = readRemote(false, key, sData);
+            if (r == ZKR_SUCCESS)
+            {
+                break;
+            }
+            zklog.warning("Database::read() retried readRemote() after dbReadRetryDelay=" + to_string(config.dbReadRetryDelay) + "us and failed with error=" + zkresult2string(r) + " i=" + to_string(i));
+        }
+    }
+    if (r == ZKR_UNSPECIFIED)
+    {
+        zklog.error("Database::read() requested a key that does not exist (ZKR_DB_KEY_NOT_FOUND): " + key);
+        r = ZKR_DB_KEY_NOT_FOUND;
+    }
+    return r;
+}
+
 #ifdef DATABASE_COMMIT
 
 void Database::setAutoCommit(const bool ac)

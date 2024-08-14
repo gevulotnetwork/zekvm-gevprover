@@ -340,12 +340,6 @@ using grpc::Status;
         " UUID=" + proverRequest.uuid, &proverRequest.tags);
 #endif
 
-    if(config.saveInputToFile) {
-        json ij;
-        proverRequest.input.save(ij);
-        json2file(ij, "output/executor_input_file.json");
-    }
-
     if (config.logExecutorServerInputJson)
     {
         // Log the input file content
