@@ -352,8 +352,8 @@ void Prover::genBatchProof(ProverRequest *pProverRequest)
     json inputJson;
     pProverRequest->input.save(inputJson);
 
-    std::string oldRoot = Remove0xIfPresent(inputJson["oldStateRoot"].get<std::string>());
-    std::string mtState;
+    std::string &oldRoot = Remove0xIfPresent(inputJson["oldStateRoot"].get<std::string>());
+    std::string &mtState;
     pHashDB->readState(oldRoot, mtState);
     zklog.info("genBatchProof() received state: " + mtState);
 
