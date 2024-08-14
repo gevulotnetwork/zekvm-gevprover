@@ -23,7 +23,7 @@
 #include "starks.hpp"
 #include "constant_pols_starks.hpp"
 #include "fflonk_prover.hpp"
-#include "hashdb_factory.hpp"
+#include "hashdb_singleton.hpp"
 
 class Prover
 {
@@ -50,7 +50,7 @@ public:
     vector<ProverRequest *> pendingRequests;   // Queue of pending requests
     ProverRequest *pCurrentRequest;            // Request currently being processed by the prover thread in server mode
     vector<ProverRequest *> completedRequests; // Map uuid -> ProveRequest pointer
-    HashDBInterface *pHashDB;
+    HashDB *pHashDB;
 private:
     pthread_t proverPthread;  // Prover thread
     pthread_t cleanerPthread; // Garbage collector

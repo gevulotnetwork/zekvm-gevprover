@@ -534,7 +534,7 @@ void HashDB::hashSave(const Goldilocks::Element (&a)[8], const Goldilocks::Eleme
 #endif
 }
 
-void readState(const string &oldRoot, string &value) 
+void HashDB::readState(const string &oldRoot, string &value) 
 {
     try
     {

@@ -62,7 +62,7 @@ Prover::Prover(Goldilocks &fr,
         pthread_create(&proverPthread, NULL, proverThread, this);
         pthread_create(&cleanerPthread, NULL, cleanerThread, this);
 
-        pHashDB = HashDBClientFactory::createHashDBClient(fr, config);
+        pHashDB = hashDBSingleton.get();
         if (pHashDB == NULL)
         {
             zklog.error("MainExecutor::MainExecutor() failed calling HashDBClientFactory::createHashDBClient()");
