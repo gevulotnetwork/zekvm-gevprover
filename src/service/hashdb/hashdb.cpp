@@ -541,7 +541,7 @@ void HashDB::readState(json &jsonResult)
         json nodeJson;
         json programJson;
         zkresult nodeTblRes = db.readState(false, nodeJson);
-        zkresult programTblRes = db.readState(false, programJson);
+        zkresult programTblRes = db.readState(true, programJson);
         if(nodeTblRes != ZKR_SUCCESS || programTblRes != ZKR_SUCCESS) 
         {
             zklog.error("Error Reading state, Node: " + zkresult2string(nodeTblRes) + " Program: " + zkresult2string(programTblRes));
