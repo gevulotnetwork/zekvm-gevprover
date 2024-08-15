@@ -357,6 +357,12 @@ void Prover::genBatchProof(ProverRequest *pProverRequest)
     pHashDB->readState(oldRoot, mtState);
     zklog.info("genBatchProof() received state: " + mtState);
 
+    json mtJson;
+    mtJson["hash"] = oldRoot;
+    mtJson["value"] = mtState;
+
+    inputJson["mtState"] = mtJson;
+
     Gevson gevson("~/img/localkey.pki", "http://localhost:9944");
     std::vector<json> gevInput = {inputJson};
     json gev_tx = gevson.generateProof(gevInput, std::string("BATCH_PROOF"));

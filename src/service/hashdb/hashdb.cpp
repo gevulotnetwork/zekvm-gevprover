@@ -539,7 +539,7 @@ void HashDB::readState(string &oldRoot, string &value)
     try
     {
         zkresult dbres = db.readState(oldRoot, value);
-        zklog.info("Old Root: " + value + ", Value: " + value);
+        zklog.info("Old Root: " + oldRoot + ", Value: " + value);
     }
     catch(const std::exception& e)
     {
