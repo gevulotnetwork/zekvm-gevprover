@@ -354,7 +354,6 @@ void Prover::genBatchProof(ProverRequest *pProverRequest)
 
     json mtState;
     pHashDB->readState(mtState);
-    zklog.info("genBatchProof() received state: " + mtState.dump());
 
     inputJson["mtState"] = mtState;
 
