@@ -50,7 +50,7 @@ bool Gevson::validateInput(size_t fileCount, const std::string &proofType)
     {
         return false;
     }
-    else if (proofType == "FINAL_PROOF" && fileCount != 1)
+    else if (proofType == "FINAL_PROOF" && fileCount != 2)
     {
         return false;
     }
