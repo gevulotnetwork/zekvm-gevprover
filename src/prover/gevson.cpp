@@ -102,8 +102,8 @@ std::string Gevson::executeCommand(const std::vector<std::string> &hashes, const
     }
 
     cmd += "]},{\"program\":\"017f9beec285ee0b981b1daa1095ac334ae529992950936ff2412700cce3b934\",\"cmd_args\":[{\"name\":\"-proof\",\"value\":\"VERIFIER\"}],\"inputs\":[]}]'";
-    zklog.info("Gevulot command: " + cmd.c_str());
-    
+    zklog.info(std::string("Gevulot command: ") + cmd);
+
     std::string output = exec(cmd.c_str());
 
     std::regex txHashRegex("Tx hash:([a-fA-F0-9]+)");
