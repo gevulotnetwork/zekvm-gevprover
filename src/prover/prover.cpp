@@ -370,6 +370,7 @@ void Prover::genBatchProof(ProverRequest *pProverRequest)
     url2json(proof_url, proof);
 
     pProverRequest->batchProofOutput = proof;
+    pProverRequest->result = ZKR_SUCCESS;
 
     TimerStopAndLog(PROVER_BATCH_PROOF);
 }
@@ -402,6 +403,7 @@ void Prover::genAggregatedProof(ProverRequest *pProverRequest)
     url2json(proof_url, proof);
 
     pProverRequest->aggregatedProofOutput = proof;
+    pProverRequest->result = ZKR_SUCCESS;
 
     TimerStopAndLog(PROVER_AGGREGATED_PROOF);
 }
@@ -442,6 +444,7 @@ void Prover::genFinalProof(ProverRequest *pProverRequest)
     url2json(public_url, publicJson);
 
     pProverRequest->proof.load(proof, publicJson);
+    pProverRequest->result = ZKR_SUCCESS;
 
     TimerStopAndLog(PROVER_FINAL_PROOF);
 }
