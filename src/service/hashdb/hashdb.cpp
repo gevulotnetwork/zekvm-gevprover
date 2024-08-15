@@ -534,12 +534,22 @@ void HashDB::hashSave(const Goldilocks::Element (&a)[8], const Goldilocks::Eleme
 #endif
 }
 
-void HashDB::readState(string &oldRoot, string &value) 
+void HashDB::readState(json &jsonResult) 
 {
     try
     {
-        zkresult dbres = db.readState(oldRoot, value);
-        zklog.info("Old Root: " + oldRoot + ", Value: " + value);
+        json nodeJson;
+        json programJson;
+        zkresult nodeTblRes = db.readState(false, nodeJson);
+        zkresult programTblRes = db.readState(false, programJson);
+        if(nodeTblRes != ZKR_SUCCESS || programTblRes != ZKR_SUCCESS) 
+        {
+            zklog.error("Error Reading state, Node: " + zkresult2string(nodeTblRes) + " Program: " + zkresult2string(programTblRes));
+            exitProcess();
+        }
+
+        jsonResult["node"] = nodeJson;
+        jsonResult["program"] = programJson;
     }
     catch(const std::exception& e)
     {

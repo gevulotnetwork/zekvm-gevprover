@@ -61,6 +61,7 @@ private:
     // Remote database based on Postgres (PostgreSQL)
     void initRemote(void);
     zkresult readRemote(bool bProgram, const string &key, string &value);
+    zkresult readAllRemote(bool bProgram, json &jsonResult);
     zkresult readTreeRemote(const string &key, bool *keys, uint64_t level, uint64_t &numberOfFields);
     zkresult writeRemote(bool bProgram, const string &key, const string &value);
     zkresult writeGetTreeFunction(void);
@@ -91,7 +92,7 @@ public:
     zkresult write(const string &_key, const Goldilocks::Element* vkey, const vector<Goldilocks::Element> &value, const bool persistent);
     zkresult getProgram(const string &_key, vector<uint8_t> &value, DatabaseMap *dbReadLog);
     zkresult setProgram(const string &_key, const vector<uint8_t> &value, const bool persistent);
-    zkresult readState(string &key, string &result);
+    zkresult readState(bool bProgram, json &jsonResult);
     inline bool usingAssociativeCache(void){ return useAssociativeCache; };
 
 private:

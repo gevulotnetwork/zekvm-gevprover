@@ -609,6 +609,57 @@ zkresult Database::readRemote(bool bProgram, const string &key, string &value)
     return ZKR_SUCCESS;
 }
 
+zkresult Database::readAllRemote(bool bProgram, json &jsonResult)
+{
+    const std::string &tableName = (bProgram ? config.dbProgramTableName : config.dbNodesTableName);
+
+    if (config.logRemoteDbReads)
+    {
+        zklog.info("Database::readRemoteAll() table=" + tableName);
+    }
+
+    DatabaseConnection *pDatabaseConnection = getConnection();
+
+    try
+    {
+        std::string query = "SELECT * FROM " + tableName + ";";
+
+        pqxx::result rows;
+
+        pqxx::nontransaction n(*(pDatabaseConnection->pConnection));
+
+        // Execute the query
+        rows = n.exec(query);
+
+        n.commit();
+
+        for (const auto &row : rows)
+        {
+            if (row.size() != 2)
+            {
+                zklog.error("Database::readRemoteAll() table=" + tableName + " got an invalid number of columns for the row: " + std::to_string(row.size()));
+                exitProcess();
+            }
+            nlohmann::json jsonRow;
+            jsonRow["hash"] = removeBSXIfExists(row[0].c_str());
+            jsonRow["value"] = removeBSXIfExists(row[1].c_str());
+
+            jsonResult.push_back(jsonRow);
+        }
+    }
+    catch (const std::exception &e)
+    {
+        zklog.error("Database::readRemoteAll() table=" + tableName + " exception: " + std::string(e.what()) + " connection=" + std::to_string((uint64_t)pDatabaseConnection));
+        queryFailed();
+        disposeConnection(pDatabaseConnection);
+        return ZKR_DB_ERROR;
+    }
+
+    disposeConnection(pDatabaseConnection);
+
+    return ZKR_SUCCESS;
+}
+
 zkresult Database::readTreeRemote(const string &key, bool *keys, uint64_t level, uint64_t &numberOfFields)
 {
     zkassert(keys != NULL);
@@ -1630,28 +1681,22 @@ zkresult Database::getFlushData(uint64_t flushId, uint64_t &storedFlushId, unord
     return ZKR_SUCCESS;
 }
 
-zkresult Database::readState(string &key, string &result) {
-    zkresult r = readRemote(false, key, result);
+zkresult Database::readState(bool bProgram, json &jsonResult) {
+    zkresult r = readAllRemote(bProgram, jsonResult);
     if ( (r != ZKR_SUCCESS) && (config.dbReadRetryDelay > 0) )
     {
         for (uint64_t i=0; i<config.dbReadRetryCounter; i++)
         {
-            zklog.warning("Database::readState() failed calling readRemote() with error=" + zkresult2string(r) + "; will retry after " + to_string(config.dbReadRetryDelay) + "us key=" + key + " i=" + to_string(i));
+            zklog.warning("Database::readState() failed calling readRemote() with error=" + zkresult2string(r) + "; will retry after " + to_string(config.dbReadRetryDelay) + "us i=" + to_string(i));
 
-            // Retry after dbReadRetryDelay us
             usleep(config.dbReadRetryDelay);
-            r = readRemote(false, key, result);
+            r = readAllRemote(bProgram, jsonResult);
             if (r == ZKR_SUCCESS)
             {
                 break;
             }
             zklog.warning("Database::readState() retried readRemote() after dbReadRetryDelay=" + to_string(config.dbReadRetryDelay) + "us and failed with error=" + zkresult2string(r) + " i=" + to_string(i));
         }
-    }
-    if (r == ZKR_UNSPECIFIED)
-    {
-        zklog.error("Database::readState() requested a key that does not exist (ZKR_DB_KEY_NOT_FOUND): " + key);
-        r = ZKR_DB_KEY_NOT_FOUND;
     }
     return r;
 }
