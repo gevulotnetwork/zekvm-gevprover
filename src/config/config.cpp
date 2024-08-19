@@ -195,7 +195,6 @@ void Config::load(json &config)
     ParseBool(config, "executorClientCheckNewStateRoot", "EXECUTOR_CLIENT_CHECK_NEW_STATE_ROOT", executorClientCheckNewStateRoot, false);
     ParseU16(config, "hashDBServerPort", "HASHDB_SERVER_PORT", hashDBServerPort, 50061);
     ParseString(config, "hashDBURL", "HASHDB_URL", hashDBURL, "local");
-    ParseString(config, "gevsonURL", "GEVSON_URL", gevsonURL, "localhost:50091");
     ParseString(config, "awsBucketName", "AWS_BUCKET_NAME", awsBucketName, "");
     ParseString(config, "awsRegion", "AWS_REGION", awsRegion, "us-east-2");
     //ParseBool(config, "hashDB64", "HASHDB64", hashDB64, false);
@@ -444,7 +443,6 @@ void Config::print(void)
     zklog.info("    executorClientCheckNewStateRoot=" + to_string(executorClientCheckNewStateRoot));
     zklog.info("    hashDBServerPort=" + to_string(hashDBServerPort));
     zklog.info("    hashDBURL=" + hashDBURL);
-    zklog.info("    gevsonURL=" + gevsonURL);
     zklog.info("    awsBucketName=" + awsBucketName);
     zklog.info("    awsRegion=" + awsRegion);
     zklog.info("    hashDB64=" + to_string(hashDB64));

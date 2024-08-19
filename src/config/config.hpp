@@ -84,7 +84,6 @@ public:
     // HashDB service
     uint16_t hashDBServerPort;
     string hashDBURL;
-    string gevsonURL;
     string awsBucketName;
     string awsRegion;
     bool hashDB64;

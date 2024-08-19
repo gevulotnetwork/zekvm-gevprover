@@ -89,7 +89,7 @@ std::string Gevson::calculateHash(const std::string &file)
 
 std::string Gevson::executeCommand(const std::vector<std::string> &hashes, const std::vector<std::string> &fileUrls, const std::string &proofType)
 {
-    std::string cmd = "gevulot-cli --keyfile " + config.gevsonKeyfilePath + " --jsonurl " + config.gevsonURL + " exec --tasks '[{\"program\":\"" + config.gevulotProverHash + "\",\"cmd_args\":[{\"name\":\"-proof\",\"value\":\"" + proofType + "\"}],\"inputs\":[";
+    std::string cmd = "gevulot-cli --keyfile " + config.gevsonKeyfilePath + " --jsonurl " + config.gevulotURL + " exec --tasks '[{\"program\":\"" + config.gevulotProverHash + "\",\"cmd_args\":[{\"name\":\"-proof\",\"value\":\"" + proofType + "\"}],\"inputs\":[";
 
     for (size_t i = 0; i < hashes.size(); ++i)
     {
