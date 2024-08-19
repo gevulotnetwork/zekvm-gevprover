@@ -95,6 +95,10 @@ public:
     uint16_t aggregatorServerPort;
     uint16_t aggregatorClientPort;
     string aggregatorClientHost;
+    string gevsonKeyfilePath;
+    string gevulotURL;
+    string gevulotProverHash;
+    string gevulotVerifierHash;
     uint64_t aggregatorClientMockTimeout;
     uint64_t aggregatorClientWatchdogTimeout;
     uint64_t aggregatorClientMaxStreams; // Max number of streams, used to limit E2E test execution; if 0 then there is no limit

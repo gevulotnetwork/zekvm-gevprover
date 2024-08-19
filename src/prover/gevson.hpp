@@ -4,17 +4,14 @@
 #include <string>
 #include <vector>
 #include "utils.hpp"
-
 class Gevson
 {
 public:
-    Gevson(const std::string &keyfile, const std::string &jsonurl);
-
+    Gevson::Gevson(const Config config): config(config) {}
     json generateProof(const std::vector<json> &jsonFiles, const std::string &proofType);
 
 private:
-    std::string keyfile;
-    std::string jsonurl;
+    Config config;
 
     bool validateInput(size_t fileCount, const std::string& proofType);
     std::string exec(const char *cmd);

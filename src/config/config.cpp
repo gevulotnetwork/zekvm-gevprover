@@ -205,6 +205,10 @@ void Config::load(json &config)
     ParseU16(config, "aggregatorServerPort", "AGGREGATOR_SERVER_PORT", aggregatorServerPort, 50081);
     ParseU16(config, "aggregatorClientPort", "AGGREGATOR_CLIENT_PORT", aggregatorClientPort, 50081);
     ParseString(config, "aggregatorClientHost", "AGGREGATOR_CLIENT_HOST", aggregatorClientHost, "127.0.0.1");
+    ParseString(config, "gevsonKeyfilePath", "GEVSON_KEYFILE_PATH", gevsonKeyfilePath, "config/localkey.pki");
+    ParseString(config, "gevulotProverHash", "GEVULOT_PROVER_HASH", gevulotProverHash, "691c8479b8305dda72718d383621f0b58ad27c8c44030731832983b1de55b16f");
+    ParseString(config, "gevulotVerifierHash", "GEVULOT_VERIFIER_HASH", gevulotVerifierHash, "017f9beec285ee0b981b1daa1095ac334ae529992950936ff2412700cce3b934");
+    ParseString(config, "gevulotURL", "GEVULOT_URL", gevulotURL, "http://localhost:9944");
     ParseU64(config, "aggregatorClientMockTimeout", "AGGREGATOR_CLIENT_MOCK_TIMEOUT", aggregatorClientMockTimeout, 60 * 1000 * 1000);
     ParseU64(config, "aggregatorClientWatchdogTimeout", "AGGREGATOR_CLIENT_WATCHDOG_TIMEOUT", aggregatorClientWatchdogTimeout, 60 * 1000 * 1000);
     ParseU64(config, "aggregatorClientMaxStreams", "AGGREGATOR_CLIENT_MAX_STREAMS", aggregatorClientMaxStreams, 0);
@@ -449,6 +453,10 @@ void Config::print(void)
     zklog.info("    aggregatorServerPort=" + to_string(aggregatorServerPort));
     zklog.info("    aggregatorClientPort=" + to_string(aggregatorClientPort));
     zklog.info("    aggregatorClientHost=" + aggregatorClientHost);
+    zklog.info("    gevsonKeyfilePath=" + gevsonKeyfilePath);
+    zklog.info("    gevulotURL=" + gevulotURL);
+    zklog.info("    gevulotProverHash=" + gevulotProverHash);
+    zklog.info("    gevulotVerifierHash=" + gevulotVerifierHash);
     zklog.info("    aggregatorClientMockTimeout=" + to_string(aggregatorClientMockTimeout));
     zklog.info("    aggregatorClientWatchdogTimeout=" + to_string(aggregatorClientWatchdogTimeout));
     zklog.info("    aggregatorClientMaxStreams=" + to_string(aggregatorClientMaxStreams));

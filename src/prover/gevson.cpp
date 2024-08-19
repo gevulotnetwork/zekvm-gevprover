@@ -8,9 +8,6 @@
 #include <regex>
 #include <fstream>
 
-Gevson::Gevson(const std::string &keyfile, const std::string &jsonurl)
-    : keyfile(keyfile), jsonurl(jsonurl) {}
-
 json Gevson::generateProof(const std::vector<json> &jsonFiles, const std::string &proofType)
 {
     if (!validateInput(jsonFiles.size(), proofType))
@@ -92,7 +89,7 @@ std::string Gevson::calculateHash(const std::string &file)
 
 std::string Gevson::executeCommand(const std::vector<std::string> &hashes, const std::vector<std::string> &fileUrls, const std::string &proofType)
 {
-    std::string cmd = "gevulot-cli --keyfile " + keyfile + " --jsonurl " + jsonurl + " exec --tasks '[{\"program\":\"691c8479b8305dda72718d383621f0b58ad27c8c44030731832983b1de55b16f\",\"cmd_args\":[{\"name\":\"-proof\",\"value\":\"" + proofType + "\"}],\"inputs\":[";
+    std::string cmd = "gevulot-cli --keyfile " + config.gevsonKeyfilePath + " --jsonurl " + config.gevsonURL + " exec --tasks '[{\"program\":\"" + config.gevulotProverHash + "\",\"cmd_args\":[{\"name\":\"-proof\",\"value\":\"" + proofType + "\"}],\"inputs\":[";
 
     for (size_t i = 0; i < hashes.size(); ++i)
     {
@@ -101,7 +98,7 @@ std::string Gevson::executeCommand(const std::vector<std::string> &hashes, const
         cmd += "{\"Input\": {\"local_path\": \"" + hashes[i] + "\", \"vm_path\": \"/workspace/" + hashes[i] + "\", \"file_url\": \"" + fileUrls[i] + "\"}}";
     }
 
-    cmd += "]},{\"program\":\"017f9beec285ee0b981b1daa1095ac334ae529992950936ff2412700cce3b934\",\"cmd_args\":[{\"name\":\"-proof\",\"value\":\"VERIFIER\"}],\"inputs\":[]}]'";
+    cmd += "]},{\"program\":\"" + config.gevulotVerifierHash + "\",\"cmd_args\":[{\"name\":\"-proof\",\"value\":\"VERIFIER\"}],\"inputs\":[]}]'";
     zklog.info(std::string("Gevulot command: ") + cmd);
 
     std::string output = exec(cmd.c_str());
@@ -120,7 +117,7 @@ std::string Gevson::executeCommand(const std::vector<std::string> &hashes, const
 
 void Gevson::waitForTxTree(const std::string &txHash)
 {
-    std::string cmd = "gevulot-cli --jsonurl " + jsonurl + " print-tx-tree " + txHash;
+    std::string cmd = "gevulot-cli --jsonurl " + config.gevulotURL + " print-tx-tree " + txHash;
     while (true)
     {
         std::string output = exec(cmd.c_str());
@@ -134,7 +131,7 @@ void Gevson::waitForTxTree(const std::string &txHash)
 
 std::string Gevson::getFirstNodeHash(const std::string &txHash)
 {
-    std::string cmd = "gevulot-cli --jsonurl " + jsonurl + " print-tx-tree " + txHash;
+    std::string cmd = "gevulot-cli --jsonurl " + config.gevulotURL + " print-tx-tree " + txHash;
     std::string output = exec(cmd.c_str());
 
     std::regex nodeHashRegex("Node: ([a-fA-F0-9]+)");
@@ -151,7 +148,7 @@ std::string Gevson::getFirstNodeHash(const std::string &txHash)
 
 json Gevson::getTx(const std::string &nodeHash)
 {
-    std::string cmd = "gevulot-cli --jsonurl " + jsonurl + " get-tx " + nodeHash;
+    std::string cmd = "gevulot-cli --jsonurl " + config.gevulotURL + " get-tx " + nodeHash;
     std::string output = exec(cmd.c_str());
     return json::parse(output);
 }

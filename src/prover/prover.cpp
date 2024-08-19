@@ -357,7 +357,7 @@ void Prover::genBatchProof(ProverRequest *pProverRequest)
 
     inputJson["mtState"] = mtState;
 
-    Gevson gevson("~/img/localkey.pki", "http://localhost:9944");
+    Gevson gevson(config);
     std::vector<json> gevInput = {inputJson};
     json gev_tx = gevson.generateProof(gevInput, std::string("BATCH_PROOF"));
 
@@ -390,7 +390,7 @@ void Prover::genAggregatedProof(ProverRequest *pProverRequest)
     zklog.info("Prover::genAggregatedProof() UUID: " + pProverRequest->uuid);
     zklog.info("Prover::genAggregatedProof() input file: " + pProverRequest->inputFile());
 
-    Gevson gevson("~/img/localkey.pki", "http://localhost:9944");
+    Gevson gevson(config);
     std::vector<json> gevInput = {pProverRequest->aggregatedProofInput1, pProverRequest->aggregatedProofInput2};
 
     json gev_tx = gevson.generateProof(gevInput, std::string("AGGREGATED_PROOF"));
@@ -426,7 +426,7 @@ void Prover::genFinalProof(ProverRequest *pProverRequest)
     json inputJson;
     pProverRequest->input.save(inputJson);
 
-    Gevson gevson("~/img/localkey.pki", "http://localhost:9944");
+    Gevson gevson(config);
     std::vector<json> gevInput = {pProverRequest->finalProofInput, inputJson};
     json gev_tx = gevson.generateProof(gevInput, std::string("FINAL_PROOF"));
 
