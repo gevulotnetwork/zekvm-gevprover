@@ -1,6 +1,6 @@
-# zkEVM Prover
+# GevProver
 
-Built to interface with Ethereum Virtual Machines (EVM), the prover provides critical services through three primary RPC clients: the Aggregator client, Executor service, and StateDB service. The Aggregator client connects to an Aggregator server and harnesses multiple zkEVM Provers simultaneously, thereby maximizing proof generation efficiency. This involves a process where the Prover component calculates a resulting state by processing EVM transaction batches and subsequently generates a proof based on the PIL polynomials definition and their constraints. The Executor service offers a mechanism to validate the integrity of proposed EVM transaction batches, ensuring they adhere to specific workload requirements. The StateDB service interfaces with a system's state (represented as a Merkle tree) and the corresponding database, thus serving as a centralized state information repository.
+Gevprover is a customized version of zkEVM-Prover v3.0.2, designed specifically to act as an interface for the Stateless Prover. Unlike the original zkEVM-Prover, all proof generation components have been removed from Gevprover. Its primary function is to connect with the zkEVM node and provide all necessary services and clients. When a proof request is received from the node, Gevprover processes the request, creates an input JSON file, and forwards it to the Gevulot Network. The Gevulot Network then handles the proof generation. Once the proof is generated and returned as a JSON file, Gevprover reconstructs the proof from the JSON data provided by the Gevulot Network.
 
 ## Components
 
@@ -30,6 +30,37 @@ Built to interface with Ethereum Virtual Machines (EVM), the prover provides cri
 - This service provides an interface to access the system's state (represented as a Merkle tree) and the database where this state is stored.
 - Both the executor and the prover rely on it as the unified source of state. It can be utilized to retrieve specific state details, such as account balances.
 - The interface for this service is described in the `statedb.proto` file.
+- Recent changes have been made to the `HashDB` service.
+- The `HashDB` service now exports old state roots from the `StateDB` service.
+- These old state roots are included in the input JSON specifically for `BATCH_PROOF` requests.
+- Since generating a `BATCH_PROOF` requires old state roots, they are sent within the input JSON to the Stateless Prover.
+
+### Prover
+
+- The `Prover` component handles proof requests from the node.
+- Functions `genBatchProof`, `genAggregatedProof`, and `genFinalProof` are responsible for processing these requests.
+- All proof generation logic has been removed from these functions.
+- When a request is received:
+  - The JSON is extracted from the `ProverRequest`.
+  - The JSON data is then sent to the `Gevson` component for further processing.
+
+### Gevson
+
+- The `Gevson` component is designed to communicate with the Gevulot Network.
+- Utilizes `gevulot-cli` for interacting with the Gevulot Network.
+- The primary function is `generateProof`, which handles proof generation.
+- `generateProof` takes two parameters:
+  - `vector<json> files`: A vector containing JSON input files.
+  - `proof_type`: The type of proof, which can be `BATCH_PROOF`, `AGGREGATED_PROOF`, or `FINAL_PROOF`.
+- Process flow of `generateProof`:
+  - Deploys all JSON input files in the `files` vector to AWS S3 using `s3cmd`.
+  - Calculates hashes for the files using `gevulot-cli`.
+  - Creates a transaction from the input and sends it to the Gevulot Network.
+  - Awaits proof generation from the Gevulot Network.
+  - While waiting, `Gevson` can accept additional requests.
+  - Once proof generation is complete, `Gevson` receives the response.
+  - The response is sent back to the respective functions (`genBatchProof`, `genAggregatedProof`, or `genFinalProof`).
+  - Finally, the response is returned to the node.
 
 ## Compiling locally
 
@@ -37,20 +68,9 @@ Steps to compile `zkevm-prover` locally:
 ### Clone repository
 
 ```sh
-git clone --recursive https://github.com/0xPolygonHermez/zkevm-prover.git
+git clone --recursive https://github.com/SnarkLabs/gevprover.git
 cd zkevm-prover
 ```
-
-### Download necessary files
-
-Download this **very large archive (~75GB)**. It's a good idea to start this download now and have it running in the background:
-
-```sh
-./tools/download_archive.sh
-```
-
-The archive will take up an additional 115GB of space once extracted.
-
 ### Install dependencies
 
 The following packages must be installed.
@@ -60,8 +80,8 @@ The following packages must be installed.
 #### Ubuntu/Debian
 
 ```sh
-apt update
-apt install build-essential libbenchmark-dev libomp-dev libgmp-dev nlohmann-json3-dev postgresql libpqxx-dev libpqxx-doc nasm libsecp256k1-dev grpc-proto libsodium-dev libprotobuf-dev libssl-dev cmake libgrpc++-dev protobuf-compiler protobuf-compiler-grpc uuid-dev
+sudo apt update
+sudo apt install build-essential libbenchmark-dev libomp-dev libgmp-dev nlohmann-json3-dev postgresql libpqxx-dev libpqxx-doc nasm libsecp256k1-dev libcurl4-openssl-dev libsodium-dev libprotobuf-dev libssl-dev cmake libgrpc++-dev protobuf-compiler protobuf-compiler-grpc uuid-dev s3cmd
 ```
 
 #### openSUSE
@@ -69,19 +89,39 @@ apt install build-essential libbenchmark-dev libomp-dev libgmp-dev nlohmann-json
 zypper addrepo https://download.opensuse.org/repositories/network:cryptocurrencies/openSUSE_Tumbleweed/network:cryptocurrencies.repo
 zypper refresh
 zypper install -t pattern devel_basis
-zypper install libbenchmark1 libomp16-devel libgmp10 nlohmann_json-devel postgresql libpqxx-devel ghc-postgresql-libpq-devel nasm libsecp256k1-devel grpc-devel libsodium-devel libprotobuf-c-devel libssl53 cmake libgrpc++1_57 protobuf-devel uuid-devel llvm llvm-devel libopenssl-devel
+zypper install libbenchmark1 libomp16-devel libgmp10 nlohmann_json-devel postgresql libpqxx-devel ghc-postgresql-libpq-devel nasm libsecp256k1-devel grpc-devel libsodium-devel libprotobuf-c-devel libssl53 cmake libgrpc++1_57 protobuf-devel uuid-devel llvm llvm-devel libopenssl-devel s3cmd
 ```
 
 #### Fedora
 ```
 dnf group install "C Development Tools and Libraries" "Development Tools"
 dnf config-manager --add-repo https://terra.fyralabs.com/terra.repo
-dnf install google-benchmark-devel libomp-devel gmp gmp-devel gmp-c++ nlohmann-json-devel postgresql libpqxx-devel nasm libsecp256k1-devel grpc-devel libsodium-devel cmake grpc grpc-devel grpc-cpp protobuf-devel protobuf-c-devel uuid-devel libuuid-devel uuid-c++ llvm llvm-devel openssl-devel 
+dnf install google-benchmark-devel libomp-devel gmp gmp-devel gmp-c++ nlohmann-json-devel postgresql libpqxx-devel nasm libsecp256k1-devel grpc-devel libsodium-devel cmake grpc grpc-devel grpc-cpp protobuf-devel protobuf-c-devel uuid-devel libuuid-devel uuid-c++ llvm llvm-devel openssl-devel s3cmd
 ```
 
 #### Arch
 ```sh
 pacman -S base-devel extra/protobuf community/grpc-cli community/nlohmann-json extra/libpqxx nasm extra/libsodium community/libsecp256k1
+```
+
+### Install `gevulot-cli`
+
+Run the following command to install `gevulot-cli`:
+```bash
+cargo install --git https://github.com/gevulotnetwork/gevulot.git gevulot-cli
+```
+___Note:__ Make sure rust is installed. Please refer to gevulot's doc for [key registration](https://docs.gevulot.com/gevulot-docs/devnet/key-registration)._
+
+### Configure `s3cmd`:
+Run the following command and fill in all the information in the interactive shell to configure `s3cmd`:
+```bash
+s3cmd --configure
+```
+
+Run the following command to test `s3cmd` configuration:
+```bash
+echo "This is a test" > test.txt
+s3cmd put ./test.txt s3://<CONFIGURED_BUCKET_NAME>/test.txt
 ```
 
 ### Compilation
@@ -105,7 +145,7 @@ To compile in debug mode, run `make -j dbg=1`.
 ### Test vectors
 
 ```sh
-./build/zkProver -c testvectors/config_runFile_BatchProof.json
+./build/zkProver -c config/config.batch_proof.json
 ```
 
 ## StateDB service database
@@ -126,7 +166,7 @@ For example:
 
 ```sh
 sudo docker build -t zkprover .
-sudo docker run --rm --network host -ti -p 50051:50051 -p 50061:50061 -p 50071:50071 -v $PWD/testvectors:/usr/src/app zkprover input_executor.json
+docker run -e AWS_ACCESS_KEY_ID=<ACCESS_KEY> -e AWS_SECRET_ACCESS_KEY=<SECRET_ACCESS_KEY> -e AWS_DEFAULT_REGION=<YOUR_REGION> --network host gevprover zkProver
 ```
 
 ## Usage
@@ -136,6 +176,12 @@ To run the Prover, supply a `config.json` file containing the parameters that he
 | Parameter              | Description |
 | ---------------------- | ----------- |
 | `runStateDBServer`     | Enables StateDB GRPC service, provides SMT (Sparse Merkle Tree) and Database access |
+| `gevulotURL`     | Provide the gevulot RPC URL here so `gevson` can send txs to gevulot network |
+| `gevsonKeyfilePath`     | Required by `gevson` to send txs to gevulot network |
+| `awsBucketName`     | Required by `gevson` for uploading files to specific bucket on AWS |
+| `awsRegion`     | It is also required by `gevson` for uploading files on AWS |
+| `gevulotProverHash`     | (Optional) It is the prover hash of deployed prover on gevulot network, It's set by default |
+| `gevulotVerifierHash`     | (Optional) It is the verifier hash of deployed verifier on gevulot network, It's set by default |
 | `runExecutorServer`    | Enables Executor GRPC service, provides a service to process transaction batches    |
 | `runAggregatorClient`  | Enables Aggregator GRPC client, connects to the Aggregator and process its requests |
 | `aggregatorClientHost` | IP address of the Aggregator server to which the Aggregator client must connect to  |
