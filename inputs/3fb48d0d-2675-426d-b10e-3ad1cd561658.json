@@ -1,0 +1,21 @@
+{
+    "aggregatorAddress": "0xb9d7ac3fb6f405d4347deeb15143617f9e411887",
+    "batchL2Data": "0x",
+    "chainID": 0,
+    "contractsBytecode": {},
+    "db": {},
+    "forkID": 0,
+    "from": "",
+    "globalExitRoot": "0x0",
+    "newAccInputHash": "0x0",
+    "newLocalExitRoot": "0x0",
+    "newNumBatch": 0,
+    "newStateRoot": "0x0",
+    "noCounters": false,
+    "oldAccInputHash": "0x0",
+    "oldNumBatch": 0,
+    "oldStateRoot": "0x0",
+    "sequencerAddr": "0x0",
+    "timestamp": 0,
+    "updateMerkleTree": false
+}

@@ -1,0 +1,21 @@
+{
+    "aggregatorAddress": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+    "batchL2Data": "0xf84780808401c9c38094ab556dd27bc0235167227a32e7328c6a3d19642780a401ffc9a780ac58cd000000000000000000000000000000000000000000000000000000008203e98080a54492cfacf71aef702421b7fbc70636537a7b2fbe5718c5ed970a001bb7756b2e9fb27acc75955b898f0b12ec52aa34bf08f01db654374484b80bf12f0d841e1cff",
+    "chainID": 1001,
+    "contractsBytecode": {},
+    "db": {},
+    "forkID": 6,
+    "from": "0x1111111111111111111111111111111111111111",
+    "globalExitRoot": "0xad3228b676f7d3cd4284a5443f17f1962b36e491b30a40b2405849e597ba5fb5",
+    "newAccInputHash": "0x0",
+    "newLocalExitRoot": "0x0",
+    "newNumBatch": 0,
+    "newStateRoot": "0x0",
+    "noCounters": true,
+    "oldAccInputHash": "0x6f395c6a646f74a32e1e4ddfbe25bda7356732f42ebda9d9009639724d36f40d",
+    "oldNumBatch": 6,
+    "oldStateRoot": "0x66833453f629eb7ba9e11165f323fc7a0d2312ea27397bb56164ebf3548df583",
+    "sequencerAddr": "0xb9d7ac3fb6f405d4347deeb15143617f9e411887",
+    "timestamp": 1723809866,
+    "updateMerkleTree": false
+}
